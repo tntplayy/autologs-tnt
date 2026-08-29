@@ -1,3 +1,6 @@
+const supabaseUrl = 'https://puhldzoazkgjzbhgeuvk.supabase.co';
+const supabaseAnonKey = 'sb_publishable_LD8ntu_8_3mqWMkpgmAmXw_yzfHnQYl';
+const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
