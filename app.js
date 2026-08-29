@@ -76,11 +76,11 @@ function App() {
     setLoadingLogin(true);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput })
-      });
+      const response = await fetch(`http://${window.location.hostname}:5000/login`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ password: passwordInput })
+});
 
       const data = await response.json();
 
