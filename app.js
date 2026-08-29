@@ -118,6 +118,36 @@ function App() {
     setDeleteSiteModal(null);
   };
 
+  // Funcao de disparo do Selenium (API Python)
+  const dispararAutoLogin = async (cliente) => {
+    const site = sites.find(s => s.id === cliente.siteId);
+    if (!site || !site.url) {
+      alert('Este cliente não possui um site/URL cadastrado!');
+      return;
+    }
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          url: site.url,
+          username: cliente.username,
+          password: cliente.password
+        })
+      });
+
+      const data = await response.json();
+      if (response.ok) {
+        alert('Automação iniciada com sucesso!');
+      } else {
+        alert('Erro na automação: ' + data.message);
+      }
+    } catch (err) {
+      alert('Não foi possível conectar ao servidor local. Verifique se o "app_backend.py" está em execução na sua máquina.');
+    }
+  };
+
   // Cálculos KPIs
   const today = new Date();
   today.setHours(0,0,0,0);
@@ -313,10 +343,18 @@ function App() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
-                        <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400">
+                        {/* Botão de Automação Zap */}
+                        <button 
+                          onClick={() => dispararAutoLogin(c)} 
+                          title="Fazer Login Automático via Selenium"
+                          className="text-slate-400 hover:text-amber-400 transition-colors"
+                        >
+                          <i data-lucide="zap" className="w-4 h-4"></i>
+                        </button>
+                        <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors">
                           <i data-lucide="edit" className="w-4 h-4"></i>
                         </button>
-                        <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-red-400">
+                        <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-red-400 transition-colors">
                           <i data-lucide="trash-2" className="w-4 h-4"></i>
                         </button>
                       </td>
