@@ -1,305 +1,41 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="dark">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciador de Acessos de Clientes</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <style>
-        body { background-color: #f8f9fa; }
-        .card { border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .table-container { background: #fff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
-        .badge-vencido { background-color: #dc3545; color: #fff; }
-        .badge-alerta { background-color: #ffc107; color: #000; }
-        .badge-ativo { background-color: #198754; color: #fff; }
-        #loginOverlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); backdrop-filter: blur(5px); z-index: 9999; display: flex; align-items: center; justify-content: center; }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AUTOLOG APPS - Gestão de Acessos</title>
+  
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- React & ReactDOM via CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <!-- Lucide Icons via CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- Babel para interpretar JSX no navegador -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              dark: '#0B0F19',
+              card: '#111827',
+              border: '#1F2937'
+            }
+          }
+        }
+      }
+    }
+  </script>
 </head>
-<body>
+<body class="bg-[#0B0F19] text-slate-100 font-sans antialiased overflow-hidden">
+  <div id="root"></div>
 
-    <!-- OVERLAY DE LOGIN -->
-    <div id="loginOverlay">
-        <div class="card p-4 shadow-lg" style="width: 350px; background: #fff;">
-            <div class="text-center mb-3">
-                <i class="fa-solid fa-lock fa-3x text-primary mb-2"></i>
-                <h4 class="fw-bold text-dark">Acesso Restrito</h4>
-                <p class="text-muted small">Digite a senha para acessar o painel</p>
-            </div>
-            <form id="loginForm">
-                <div class="mb-3">
-                    <input type="password" id="inputPassword" class="form-control" placeholder="Senha Master" required>
-                </div>
-                <button type="submit" class="btn btn-primary w-100 fw-bold">Entrar</button>
-            </form>
-        </div>
-    </div>
-
-    <!-- PAINEL PRINCIPAL -->
-    <div class="container py-4">
-        <!-- CABEÇALHO -->
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fa-solid fa-users text-primary me-2"></i>Gerenciador de Clientes</h2>
-            <div>
-                <button class="btn btn-outline-secondary btn-sm me-2" onclick="exportBackup()"><i class="fa-solid fa-download me-1"></i> Backup</button>
-                <input type="file" id="importInput" style="display:none" onchange="importBackup(event)">
-                <button class="btn btn-outline-info btn-sm me-2" onclick="document.getElementById('importInput').click()"><i class="fa-solid fa-upload me-1"></i> Restaurar</button>
-                <button class="btn btn-outline-danger btn-sm" onclick="logout()"><i class="fa-solid fa-power-off"></i> Sair</button>
-            </div>
-        </div>
-
-        <!-- RESUMO DE VENCIMENTOS -->
-        <div class="row g-3 mb-4">
-            <div class="col-md-4">
-                <div class="card p-3 border-danger">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="text-muted small">VENCIDOS</span>
-                            <h3 class="m-0 fw-bold text-danger" id="countVencidos">0</h3>
-                        </div>
-                        <i class="fa-solid fa-circle-exclamation fa-2x text-danger opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 border-warning">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="text-muted small">A VENCER (3 DÍAS)</span>
-                            <h3 class="m-0 fw-bold text-warning" id="countAlerta">0</h3>
-                        </div>
-                        <i class="fa-solid fa-triangle-exclamation fa-2x text-warning opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-3 border-success">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div>
-                            <span class="text-muted small">ATIVOS</span>
-                            <h3 class="m-0 fw-bold text-success" id="countAtivos">0</h3>
-                        </div>
-                        <i class="fa-solid fa-circle-check fa-2x text-success opacity-50"></i>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- FORMULÁRIO DE CADASTRO -->
-        <div class="card p-4 mb-4">
-            <h5 class="fw-bold mb-3">Cadastrar Novo Cliente</h5>
-            <form id="clientForm" class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Nome do Cliente</label>
-                    <input type="text" id="name" class="form-control" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Aplicativo / Site</label>
-                    <select id="site" class="form-select" required>
-                        <option value="">Selecione...</option>
-                        <option value="VU Player">VU Player</option>
-                        <option value="IBO Player">IBO Player</option>
-                        <option value="IBO Player Pro">IBO Player Pro</option>
-                        <option value="BOB Player">BOB Player</option>
-                        <option value="Quick Player">Quick Player</option>
-                        <option value="Clouddy">Clouddy</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">MAC Address</label>
-                    <input type="text" id="mac" class="form-control" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Device Key / Senha</label>
-                    <input type="text" id="key" class="form-control" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Vencimento</label>
-                    <input type="date" id="expiration" class="form-control" required>
-                </div>
-                <div class="col-12 text-end">
-                    <button type="submit" class="btn btn-primary px-4"><i class="fa-solid fa-plus me-1"></i> Adicionar Cliente</button>
-                </div>
-            </form>
-        </div>
-
-        <!-- TABELA DE CLIENTES -->
-        <div class="table-container">
-            <table class="table table-hover align-middle mb-0">
-                <thead class="table-light">
-                    <tr>
-                        <th>Status</th>
-                        <th>Cliente</th>
-                        <th>Aplicativo</th>
-                        <th>MAC</th>
-                        <th>Key</th>
-                        <th>Vencimento</th>
-                        <th class="text-end">Ações</th>
-                    </tr>
-                </thead>
-                <tbody id="clientTableBody">
-                    <!-- Clientes inseridos via JS -->
-                </tbody>
-            </table>
-        </div>
-    </div>
-
-    <script>
-        let clients = JSON.parse(localStorage.getItem('autolog_clients')) || [];
-        const API_URL = "http://127.0.0.1:5000";
-
-        // LOGIN
-        document.getElementById('loginForm').addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const password = document.getElementById('inputPassword').value;
-            try {
-                const res = await fetch(`${API_URL}/login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password })
-                });
-                if (res.ok) {
-                    sessionStorage.setItem('authenticated', 'true');
-                    document.getElementById('loginOverlay').style.display = 'none';
-                } else {
-                    alert('Senha incorreta!');
-                }
-            } catch (err) {
-                alert('Erro ao conectar com o servidor Python!');
-            }
-        });
-
-        if (sessionStorage.getItem('authenticated') === 'true') {
-            document.getElementById('loginOverlay').style.display = 'none';
-        }
-
-        function logout() {
-            sessionStorage.removeItem('authenticated');
-            location.reload();
-        }
-
-        // CADASTRO
-        document.getElementById('clientForm').addEventListener('submit', (e) => {
-            e.preventDefault();
-            const newClient = {
-                id: Date.now(),
-                name: document.getElementById('name').value,
-                site: document.getElementById('site').value,
-                mac: document.getElementById('mac').value,
-                key: document.getElementById('key').value,
-                expiration: document.getElementById('expiration').value
-            };
-            clients.push(newClient);
-            saveData();
-            document.getElementById('clientForm').reset();
-        });
-
-        function saveData() {
-            localStorage.setItem('autolog_clients', JSON.stringify(clients));
-            renderTable();
-            fetch(`${API_URL}/api/backup/save`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(clients)
-            }).catch(err => console.error("Backup remoto falhou", err));
-        }
-
-        function deleteClient(id) {
-            if (confirm("Deseja remover este cliente?")) {
-                clients = clients.filter(c => c.id !== id);
-                saveData();
-            }
-        }
-
-        // AUTOMAÇÃO
-        async function runAutoLogin(id) {
-            const client = clients.find(c => c.id === id);
-            if (!client) return;
-            try {
-                const res = await fetch(`${API_URL}/auto-login`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(client)
-                });
-                const data = await res.json();
-                alert(data.message);
-            } catch (err) {
-                alert("Erro ao executar automação no backend Python.");
-            }
-        }
-
-        // RENDERIZAÇÃO E STATUS
-        function renderTable() {
-            const tbody = document.getElementById('clientTableBody');
-            tbody.innerHTML = '';
-            
-            let vencidos = 0, alertas = 0, ativos = 0;
-            const today = new Date();
-            today.setHours(0,0,0,0);
-
-            clients.forEach(c => {
-                const expDate = new Date(c.expiration + 'T00:00:00');
-                const diffDays = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-                
-                let statusBadge = '';
-                if (diffDays < 0) {
-                    statusBadge = `<span class="badge badge-vencido">Vencido</span>`;
-                    vencidos++;
-                } else if (diffDays <= 3) {
-                    statusBadge = `<span class="badge badge-alerta">A Vencer (${diffDays}d)</span>`;
-                    alertas++;
-                } else {
-                    statusBadge = `<span class="badge badge-ativo">Ativo</span>`;
-                    ativos++;
-                }
-
-                tbody.innerHTML += `
-                    <tr>
-                        <td>${statusBadge}</td>
-                        <td class="fw-bold">${c.name}</td>
-                        <td><span class="badge bg-secondary">${c.site}</span></td>
-                        <td><code>${c.mac}</code></td>
-                        <td><code>${c.key}</code></td>
-                        <td>${c.expiration.split('-').reverse().join('/')}</td>
-                        <td class="text-end">
-                            <button class="btn btn-success btn-sm me-1" onclick="runAutoLogin(${c.id})"><i class="fa-solid fa-play"></i> Logar</button>
-                            <button class="btn btn-outline-danger btn-sm" onclick="deleteClient(${c.id})"><i class="fa-solid fa-trash"></i></button>
-                        </td>
-                    </tr>
-                `;
-            });
-
-            document.getElementById('countVencidos').innerText = vencidos;
-            document.getElementById('countAlerta').innerText = alertas;
-            document.getElementById('countAtivos').innerText = ativos;
-        }
-
-        // BACKUP
-        function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(clients, null, 2));
-            const anchor = document.createElement('a');
-            anchor.setAttribute("href", dataStr);
-            anchor.setAttribute("download", `autolog_backup_${new Date().toISOString().slice(0,10)}.json`);
-            document.body.appendChild(anchor);
-            anchor.click();
-            anchor.remove();
-        }
-
-        function importBackup(e) {
-            const fileReader = new FileReader();
-            fileReader.onload = (event) => {
-                try {
-                    clients = JSON.parse(event.target.result);
-                    saveData();
-                    alert("Backup restaurado com sucesso!");
-                } catch (err) {
-                    alert("Arquivo de backup inválido.");
-                }
-            };
-            fileReader.readAsText(e.target.files[0]);
-        }
-
-        renderTable();
-    </script>
+  <!-- Carrega a lógica da aplicação -->
+  <script type="text/babel" src="app.js"></script>
 </body>
 </html>
