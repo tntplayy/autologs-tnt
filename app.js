@@ -14,7 +14,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Lista de sites cadastrados (mantidos no localStorage local para configuração rápida)
+  // Lista de sites cadastrados
   const [sites, setSites] = useState(() => {
     try {
       const saved = localStorage.getItem('autolog_sites_list');
@@ -60,7 +60,6 @@ function App() {
     if (error) {
       console.error('Erro ao buscar clientes no Supabase:', error);
     } else if (data) {
-      // Mapeia os campos da tabela Supabase para os campos esperados pelo frontend
       const mappedClients = data.map(item => ({
         id: item.id,
         name: item.nome || '',
@@ -91,49 +90,23 @@ function App() {
     }
   }, [isAuthenticated, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
 
-  // LOGIN VIA BACKEND PYTHON
-  const handleLoginSubmit = async (e) => {
+  // LOGIN DIRETO NO FRONTEND
+  const handleLoginSubmit = (e) => {
     e.preventDefault();
     setLoginError('');
     setLoadingLogin(true);
 
-    try {
-      const response = await fetch(`http://${window.location.hostname}:5000/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ password: passwordInput })
-      });
+    // Altere 'admin123' para a senha que você preferir
+    const MASTER_PASSWORD = 'admin123';
 
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success') {
-        sessionStorage.setItem('autolog_auth', 'true');
-        setIsAuthenticated(true);
-        setPasswordInput('');
-      } else {
-        setLoginError(data.message || 'Senha incorreta!');
-      }
-    } catch (err) {
-      setLoginError('Não foi possível conectar ao backend local (app_backend.py).');
-    } font-finally {
-      setLoadingLogin(false);
+    if (passwordInput === MASTER_PASSWORD) {
+      sessionStorage.setItem('autolog_auth', 'true');
+      setIsAuthenticated(true);
+      setPasswordInput('');
+    } else {
+      setLoginError('Senha incorreta!');
     }
-  };
-
-      const data = await response.json();
-
-      if (response.ok && data.status === 'success') {
-        sessionStorage.setItem('autolog_auth', 'true');
-        setIsAuthenticated(true);
-        setPasswordInput('');
-      } else {
-        setLoginError(data.message || 'Senha incorreta!');
-      }
-    } catch (err) {
-      setLoginError('Não foi possível conectar ao backend local (app_backend.py).');
-    } finally {
-      setLoadingLogin(false);
-    }
+    setLoadingLogin(false);
   };
 
   const handleLogout = () => {
@@ -159,7 +132,6 @@ function App() {
       try {
         const imported = JSON.parse(event.target.result);
         if (imported.clients && Array.isArray(imported.clients)) {
-          // Insere dados de backup no Supabase
           const formatted = imported.clients.map(c => ({
             nome: c.name || c.nome,
             app: c.site || c.app,
@@ -207,7 +179,7 @@ function App() {
         alert('Erro na automação: ' + data.message);
       }
     } catch (err) {
-      alert('Não foi possível conectar ao servidor local.\n\nVerifique se o "app_backend.py" está rodando no terminal.');
+      alert('Não foi possível conectar ao servidor local.\n\nVerifique se o "app_backend.py" está rodando no terminal do computador.');
     }
   };
 
@@ -225,7 +197,6 @@ function App() {
     };
 
     if (editingClient) {
-      // Atualizar no Supabase
       const { error } = await supabase
         .from('clientes')
         .update(dbPayload)
@@ -237,7 +208,6 @@ function App() {
         await carregarClientes();
       }
     } else {
-      // Inserir novo no Supabase
       const { error } = await supabase
         .from('clientes')
         .insert([dbPayload]);
@@ -321,7 +291,7 @@ function App() {
     return matchesSite && matchesSearch;
   });
 
-  // TELA DE LOGIN SE NÃO ESTIVER AUTENTICADO
+  // TELA DE LOGIN
   if (!isAuthenticated) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#090d16] p-4 font-sans">
@@ -400,7 +370,7 @@ function App() {
           </nav>
         </div>
 
-        {/* OPÇÕES DE BACKUP E LOGOUT NO RODAPÉ */}
+        {/* RODAPÉ */}
         <div className="p-4 border-t border-slate-800/40 space-y-1">
           <button 
             onClick={handleExportBackup} 
@@ -436,7 +406,6 @@ function App() {
               {loadingClients && <span className="text-xs text-blue-400 animate-pulse">Sincronizando Supabase...</span>}
             </div>
 
-            {/* CARDS RESUMO */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
                 <div>
@@ -479,9 +448,7 @@ function App() {
               </div>
             </div>
 
-            {/* TABELAS DE VENCIDOS E A VENCER */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              {/* CLIENTES VENCIDOS */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
                 <div className="flex items-center space-x-2 text-rose-500">
                   <i data-lucide="alert-octagon" className="w-5 h-5"></i>
@@ -506,7 +473,6 @@ function App() {
                 </div>
               </div>
 
-              {/* CLIENTES A VENCER (<= 3 DIAS) */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
                 <div className="flex items-center space-x-2 text-amber-400">
                   <i data-lucide="alert-triangle" className="w-5 h-5"></i>
@@ -547,7 +513,6 @@ function App() {
               </button>
             </div>
 
-            {/* BARRA DE PESQUISA E FILTROS DE SITES */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0">
                 <button
@@ -645,7 +610,7 @@ function App() {
           </div>
         )}
 
-        {/* GERENCIAR SITES */}
+        {/* SITES */}
         {activeTab === 'sites' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -747,7 +712,7 @@ function App() {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR EXCLUSÃO CLIENTE */}
+      {/* MODAL EXCLUIR CLIENTE */}
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
@@ -761,7 +726,7 @@ function App() {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR EXCLUSÃO SITE */}
+      {/* MODAL EXCLUIR SITE */}
       {deleteSiteModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
