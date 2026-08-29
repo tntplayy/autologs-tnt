@@ -2,6 +2,25 @@ const { useState, useEffect } = React;
 
 function App() {
   const [activeTab, setActiveTab] = useState('clientes');
+  
+  // Lista de sites cadastrados (com nome e URL)
+  const [sites, setSites] = useState(() => {
+    try {
+      const saved = localStorage.getItem('autolog_sites_list');
+      return saved ? JSON.parse(saved) : [
+        { id: 1, name: 'VU Player', url: 'https://vuproplayer.com/login' },
+        { id: 2, name: 'IBO Player Pro', url: 'https://iboplayerpro.com/login' },
+        { id: 3, name: 'IBO Player', url: 'https://iboplayer.com/device/login' },
+        { id: 4, name: 'BOB Player', url: 'https://bobplayer.com/login' },
+        { id: 5, name: 'Quick Player', url: 'https://quickplayer.org/login' },
+        { id: 6, name: 'Clouddy', url: 'https://clouddy.online/login' }
+      ];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  // Lista de clientes
   const [clients, setClients] = useState(() => {
     try {
       const saved = localStorage.getItem('autolog_clients');
@@ -14,28 +33,42 @@ function App() {
     }
   });
 
-  const customSites = ['IBO Player Pro', 'IBO Player', 'BOB Player', 'VU Player', 'Quick Player'];
+  // Modais de Clientes
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deleteClientModal, setDeleteClientModal] = useState(null);
+
+  // Modais de Sites
+  const [siteModalOpen, setSiteModalOpen] = useState(false);
+  const [editingSite, setEditingSite] = useState(null);
+  const [deleteSiteModal, setDeleteSiteModal] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('autolog_clients', JSON.stringify(clients));
   }, [clients]);
 
   useEffect(() => {
+    localStorage.setItem('autolog_sites_list', JSON.stringify(sites));
+  }, [sites]);
+
+  useEffect(() => {
     if (window.lucide) {
       window.lucide.createIcons();
     }
-  }, [activeTab, clients, clientModalOpen, deleteClientModal]);
+  }, [activeTab, clients, sites, clientModalOpen, siteModalOpen]);
 
+  // DISPARAR AUTOMAÇÃO PYTHON COM A URL ATUALIZADA
   const dispararAutoLogin = async (cliente) => {
+    const siteObj = sites.find(s => s.name === cliente.site);
+    const siteUrl = siteObj ? siteObj.url : '';
+
     try {
       const response = await fetch('http://127.0.0.1:5000/auto-login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           site: cliente.site,
+          url: siteUrl,
           mac: cliente.login,
           key: cliente.senha
         })
@@ -52,14 +85,14 @@ function App() {
     }
   };
 
+  // SALVAR CLIENTE
   const handleSaveClient = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    
     const clientData = {
       id: editingClient ? editingClient.id : Date.now(),
       name: formData.get('name') || '',
-      site: formData.get('site') || customSites[0],
+      site: formData.get('site') || (sites[0] ? sites[0].name : ''),
       login: formData.get('login') || '',
       senha: formData.get('senha') || '',
       expiry: formData.get('expiry') || '',
@@ -71,7 +104,6 @@ function App() {
     } else {
       setClients([...clients, clientData]);
     }
-
     setClientModalOpen(false);
     setEditingClient(null);
   };
@@ -79,6 +111,30 @@ function App() {
   const handleDeleteClient = (id) => {
     setClients(clients.filter(c => c.id !== id));
     setDeleteClientModal(null);
+  };
+
+  // SALVAR SITE
+  const handleSaveSite = (e) => {
+    e.preventDefault();
+    const formData = new FormData(e.target);
+    const siteData = {
+      id: editingSite ? editingSite.id : Date.now(),
+      name: formData.get('name') || '',
+      url: formData.get('url') || ''
+    };
+
+    if (editingSite) {
+      setSites(sites.map(s => s.id === editingSite.id ? siteData : s));
+    } else {
+      setSites([...sites, siteData]);
+    }
+    setSiteModalOpen(false);
+    setEditingSite(null);
+  };
+
+  const handleDeleteSite = (id) => {
+    setSites(sites.filter(s => s.id !== id));
+    setDeleteSiteModal(null);
   };
 
   return (
@@ -110,11 +166,20 @@ function App() {
             <i data-lucide="users" className="w-5 h-5"></i>
             <span>Clientes</span>
           </button>
+
+          <button 
+            onClick={() => setActiveTab('sites')} 
+            className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-sm font-medium transition-all ${activeTab === 'sites' ? 'bg-blue-600/10 text-blue-400 border border-blue-500/20' : 'text-slate-400 hover:bg-slate-800/40 hover:text-slate-200'}`}
+          >
+            <i data-lucide="globe" className="w-5 h-5"></i>
+            <span>Gerenciar Sites</span>
+          </button>
         </nav>
       </aside>
 
       {/* PAINEL PRINCIPAL */}
       <main className="flex-1 overflow-y-auto p-8">
+        {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Dashboard</h2>
@@ -128,13 +193,14 @@ function App() {
                 <p className="text-3xl font-bold text-emerald-400 mt-2">{clients.filter(c => c.status === 'EM USO').length}</p>
               </div>
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6">
-                <p className="text-sm font-medium text-slate-400">Clientes Livres</p>
-                <p className="text-3xl font-bold text-blue-400 mt-2">{clients.filter(c => c.status === 'LIVRE').length}</p>
+                <p className="text-sm font-medium text-slate-400">Sites Cadastrados</p>
+                <p className="text-3xl font-bold text-blue-400 mt-2">{sites.length}</p>
               </div>
             </div>
           </div>
         )}
 
+        {/* CLIENTES */}
         {activeTab === 'clientes' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -174,15 +240,48 @@ function App() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
-                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">
-                          ⚡
-                        </button>
-                        <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">
-                          ✏️
-                        </button>
-                        <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
-                          🗑️
-                        </button>
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">⚡</button>
+                        <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
+                        <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {/* GERENCIAR SITES */}
+        {activeTab === 'sites' && (
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Sites Cadastrados</h2>
+              <button 
+                onClick={() => { setEditingSite(null); setSiteModalOpen(true); }}
+                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 text-sm shadow-lg shadow-blue-600/20"
+              >
+                <span>+ Adicionar Site</span>
+              </button>
+            </div>
+
+            <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-hidden shadow-xl">
+              <table className="w-full text-left text-sm text-slate-300">
+                <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60">
+                  <tr>
+                    <th className="py-4 px-6">Nome do Site / App</th>
+                    <th className="py-4 px-6">URL de Login</th>
+                    <th className="py-4 px-6 text-right">Ações</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-800/40">
+                  {sites.map(s => (
+                    <tr key={s.id} className="hover:bg-slate-800/20 transition-colors">
+                      <td className="py-4 px-6 font-medium text-white">{s.name}</td>
+                      <td className="py-4 px-6 font-mono text-xs text-blue-400">{s.url}</td>
+                      <td className="py-4 px-6 text-right space-x-2">
+                        <button onClick={() => { setEditingSite(s); setSiteModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
+                        <button onClick={() => setDeleteSiteModal(s.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -193,7 +292,7 @@ function App() {
         )}
       </main>
 
-      {/* MODAL NOVO / EDITAR */}
+      {/* MODAL NOVO / EDITAR CLIENTE */}
       {clientModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -205,8 +304,8 @@ function App() {
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Site</label>
-                <select name="site" defaultValue={editingClient ? editingClient.site : customSites[0]} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-                  {customSites.map(s => <option key={s} value={s}>{s}</option>)}
+                <select name="site" defaultValue={editingClient ? editingClient.site : (sites[0] ? sites[0].name : '')} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                  {sites.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -241,7 +340,30 @@ function App() {
         </div>
       )}
 
-      {/* MODAL EXCLUIR */}
+      {/* MODAL NOVO / EDITAR SITE */}
+      {siteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
+            <h3 className="text-xl font-bold text-white">{editingSite ? 'Editar Site' : 'Novo Site'}</h3>
+            <form onSubmit={handleSaveSite} className="space-y-4">
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Nome do Aplicativo</label>
+                <input name="name" defaultValue={editingSite ? editingSite.name : ''} placeholder="Ex: VU Player Pro" required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+              </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">URL da Página de Login</label>
+                <input name="url" defaultValue={editingSite ? editingSite.url : ''} placeholder="https://exemplo.com/login" required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4">
+                <button type="button" onClick={() => { setSiteModalOpen(false); setEditingSite(null); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Salvar</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EXCLUIR CLIENTE */}
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
@@ -250,6 +372,20 @@ function App() {
             <div className="flex justify-center space-x-3 pt-2">
               <button onClick={() => setDeleteClientModal(null)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
               <button onClick={() => handleDeleteClient(deleteClientModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Excluir</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL EXCLUIR SITE */}
+      {deleteSiteModal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
+            <h3 className="text-lg font-bold text-white">Excluir site?</h3>
+            <p className="text-xs text-slate-400">Essa ação não pode ser desfeita.</p>
+            <div className="flex justify-center space-x-3 pt-2">
+              <button onClick={() => setDeleteSiteModal(null)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
+              <button onClick={() => handleDeleteSite(deleteSiteModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Excluir</button>
             </div>
           </div>
         </div>
