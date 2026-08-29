@@ -1,7 +1,5 @@
 const { useState, useEffect } = React;
 
-const MASTER_PASSWORD = "Andre96075729";
-
 function App() {
   // Autenticação
   const [isAuthenticated, setIsAuthenticated] = useState(
@@ -9,6 +7,7 @@ function App() {
   );
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
+  const [loadingLogin, setLoadingLogin] = useState(false);
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
@@ -70,15 +69,32 @@ function App() {
     }
   }, [isAuthenticated, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
 
-  // LOGIN / LOGOUT
-  const handleLoginSubmit = (e) => {
+  // LOGIN VIA BACKEND PYTHON
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
-    if (passwordInput === MASTER_PASSWORD) {
-      sessionStorage.setItem('autolog_auth', 'true');
-      setIsAuthenticated(true);
-      setLoginError('');
-    } else {
-      setLoginError('Senha incorreta!');
+    setLoginError('');
+    setLoadingLogin(true);
+
+    try {
+      const response = await fetch('http://127.0.0.1:5000/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput })
+      });
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'success') {
+        sessionStorage.setItem('autolog_auth', 'true');
+        setIsAuthenticated(true);
+        setPasswordInput('');
+      } else {
+        setLoginError(data.message || 'Senha incorreta!');
+      }
+    } catch (err) {
+      setLoginError('Não foi possível conectar ao backend local (app_backend.py).');
+    } finally {
+      setLoadingLogin(false);
     }
   };
 
@@ -252,9 +268,10 @@ function App() {
             {loginError && <p className="text-xs text-rose-500 text-center font-semibold">{loginError}</p>}
             <button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm"
+              disabled={loadingLogin}
+              className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm"
             >
-              Acessar Painel
+              {loadingLogin ? 'Verificando...' : 'Acessar Painel'}
             </button>
           </form>
         </div>
