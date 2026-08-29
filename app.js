@@ -1,22 +1,20 @@
 const { useState, useEffect } = React;
 
 function App() {
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState('clientes');
   const [clients, setClients] = useState(() => {
-    const saved = localStorage.getItem('autolog_clients');
-    return saved ? JSON.parse(saved) : [
-      { id: 1, name: 'Carlos Silva', site: 'VU Player', login: 'carlos_vu', senha: '••••••••', expiry: '2026-08-24', status: 'EM USO' },
-      { id: 2, name: 'Ana Souza', site: 'IBO Player', login: 'ana_ibo', senha: '••••••••', expiry: '2026-08-28', status: 'EM USO' },
-      { id: 3, name: 'Marcos Lima', site: 'VU Player', login: 'marcos_vu', senha: '••••••••', expiry: '2026-09-01', status: 'EM USO' },
-      { id: 4, name: 'Fernanda Costa', site: 'Clouddy', login: 'fer_cloud', senha: '••••••••', expiry: '2026-09-14', status: 'LIVRE' }
-    ];
+    try {
+      const saved = localStorage.getItem('autolog_clients');
+      return saved ? JSON.parse(saved) : [
+        { id: 1, name: 'Carlos Silva', site: 'VU Player', login: 'carlos_vu', senha: '123456', expiry: '2026-08-24', status: 'EM USO' },
+        { id: 2, name: 'Ana Souza', site: 'IBO Player', login: 'ana_ibo', senha: '123456', expiry: '2026-08-28', status: 'EM USO' }
+      ];
+    } catch (e) {
+      return [];
+    }
   });
 
-  const [customSites, setCustomSites] = useState(() => {
-    const saved = localStorage.getItem('autolog_sites');
-    return saved ? JSON.parse(saved) : ['IBO Player Pro', 'IBO Player', 'BOB Player', 'VU Player', 'Quick Player'];
-  });
-
+  const [customSites] = useState(['IBO Player Pro', 'IBO Player', 'BOB Player', 'VU Player', 'Quick Player']);
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deleteClientModal, setDeleteClientModal] = useState(null);
@@ -26,16 +24,12 @@ function App() {
   }, [clients]);
 
   useEffect(() => {
-    localStorage.setItem('autolog_sites', JSON.stringify(customSites));
-  }, [customSites]);
-
-  useEffect(() => {
     if (window.lucide) {
       window.lucide.createIcons();
     }
   }, [activeTab, clients, clientModalOpen, deleteClientModal]);
 
-  // FUNÇÃO DE AUTOMAÇÃO COM O BACKEND PYTHON
+  // AUTOMAÇÃO PYTHON
   const dispararAutoLogin = async (cliente) => {
     try {
       const response = await fetch('http://127.0.0.1:5000/auto-login', {
@@ -50,33 +44,35 @@ function App() {
 
       const data = await response.json();
       if (data.status === 'success') {
-        alert('Automação iniciada com sucesso!');
+        alert('Automação iniciada!');
       } else {
         alert('Erro na automação: ' + data.message);
       }
     } catch (err) {
-      alert('Não foi possível conectar ao servidor local.\n\nVerifique se o script "app_backend.py" está rodando no terminal.');
+      alert('Não foi possível conectar ao servidor local.\n\nVerifique se o "app_backend.py" está rodando no terminal.');
     }
   };
 
   const handleSaveClient = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const newClient = {
+    
+    const clientData = {
       id: editingClient ? editingClient.id : Date.now(),
-      name: formData.get('name'),
-      site: formData.get('site'),
-      login: formData.get('login'),
-      senha: formData.get('senha'),
-      expiry: formData.get('expiry'),
-      status: formData.get('status')
+      name: formData.get('name') || '',
+      site: formData.get('site') || customSites[0],
+      login: formData.get('login') || '',
+      senha: formData.get('senha') || '',
+      expiry: formData.get('expiry') || '',
+      status: formData.get('status') || 'LIVRE'
     };
 
     if (editingClient) {
-      setClients(clients.map(c => c.id === editingClient.id ? newClient : c));
+      setClients(clients.map(c => c.id === editingClient.id ? clientData : c));
     } else {
-      setClients([...clients, newClient]);
+      setClients([...clients, clientData]);
     }
+
     setClientModalOpen(false);
     setEditingClient(null);
   };
@@ -116,15 +112,10 @@ function App() {
             <span>Clientes</span>
           </button>
         </nav>
-
-        <div className="p-4 border-t border-slate-800/40 text-xs text-slate-500 text-center">
-          AUTOLOG APPS v2.0
-        </div>
       </aside>
 
-      {/* CONTEÚDO PRINCIPAL */}
+      {/* PAINEL PRINCIPAL */}
       <main className="flex-1 overflow-y-auto p-8">
-        {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-6">
             <h2 className="text-2xl font-bold text-white">Dashboard</h2>
@@ -138,14 +129,13 @@ function App() {
                 <p className="text-3xl font-bold text-emerald-400 mt-2">{clients.filter(c => c.status === 'EM USO').length}</p>
               </div>
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6">
-                <p className="text-sm font-medium text-slate-400">Clientes Libres</p>
+                <p className="text-sm font-medium text-slate-400">Clientes Livres</p>
                 <p className="text-3xl font-bold text-blue-400 mt-2">{clients.filter(c => c.status === 'LIVRE').length}</p>
               </div>
             </div>
           </div>
         )}
 
-        {/* TABELA DE CLIENTES */}
         {activeTab === 'clientes' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -186,28 +176,13 @@ function App() {
                         </span>
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
-                        {/* BOTÃO DE AUTOMAÇÃO (RAIO) */}
-                        <button 
-                          onClick={() => dispararAutoLogin(c)}
-                          title="Fazer Login Automático via Selenium"
-                          className="text-slate-400 hover:text-amber-400 transition-colors p-1"
-                        >
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">
                           <i data-lucide="zap" className="w-4 h-4"></i>
                         </button>
-
-                        {/* EDITAR */}
-                        <button 
-                          onClick={() => { setEditingClient(c); setClientModalOpen(true); }}
-                          className="text-slate-400 hover:text-blue-400 transition-colors p-1"
-                        >
+                        <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">
                           <i data-lucide="edit-3" className="w-4 h-4"></i>
                         </button>
-
-                        {/* EXCLUIR */}
-                        <button 
-                          onClick={() => setDeleteClientModal(c.id)}
-                          className="text-slate-400 hover:text-rose-400 transition-colors p-1"
-                        >
+                        <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
                           <i data-lucide="trash-2" className="w-4 h-4"></i>
                         </button>
                       </td>
@@ -220,7 +195,7 @@ function App() {
         )}
       </main>
 
-      {/* MODAL ADICIONAR / EDITAR CLIENTE */}
+      {/* MODAL NOVO / EDITAR */}
       {clientModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -228,39 +203,39 @@ function App() {
             <form onSubmit={handleSaveClient} className="space-y-4">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Nome</label>
-                <input name="name" defaultValue={editingClient?.name} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                <input name="name" defaultValue={editingClient ? editingClient.name : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Site</label>
-                <select name="site" defaultValue={editingClient?.site || customSites[0]} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                <select name="site" defaultValue={editingClient ? editingClient.site : customSites[0]} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
                   {customSites.map(s => <option key={s} value={s}>{s}</option>)}
                 </select>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Login / MAC</label>
-                  <input name="login" defaultValue={editingClient?.login} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  <input name="login" defaultValue={editingClient ? editingClient.login : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Senha / Key</label>
-                  <input name="senha" defaultValue={editingClient?.senha} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  <input name="senha" defaultValue={editingClient ? editingClient.senha : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Validade</label>
-                  <input type="date" name="expiry" defaultValue={editingClient?.expiry} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  <input type="date" name="expiry" defaultValue={editingClient ? editingClient.expiry : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Status</label>
-                  <select name="status" defaultValue={editingClient?.status || 'LIVRE'} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
+                  <select name="status" defaultValue={editingClient ? editingClient.status : 'LIVRE'} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
                     <option value="LIVRE">LIVRE</option>
                     <option value="EM USO">EM USO</option>
                   </select>
                 </div>
               </div>
               <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => setClientModalOpen(false)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
+                <button type="button" onClick={() => { setClientModalOpen(false); setEditingClient(null); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
                 <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Salvar</button>
               </div>
             </form>
@@ -268,7 +243,7 @@ function App() {
         </div>
       )}
 
-      {/* MODAL CONFIRMAR EXCLUSÃO */}
+      {/* MODAL EXCLUIR */}
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
