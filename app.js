@@ -97,7 +97,7 @@ function App() {
     setLoadingLogin(true);
 
     // Altere 'admin123' para a senha que você preferir
-    const MASTER_PASSWORD = 'admin123';
+    const MASTER_PASSWORD = 'Andre96075729';
 
     if (passwordInput === MASTER_PASSWORD) {
       sessionStorage.setItem('autolog_auth', 'true');
