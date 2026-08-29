@@ -14,7 +14,7 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Lista de sites cadastrados
+  // Lista de sites cadastrados (mantidos no localStorage local para configuração rápida)
   const [sites, setSites] = useState(() => {
     try {
       const saved = localStorage.getItem('autolog_sites_list');
@@ -31,18 +31,9 @@ function App() {
     }
   });
 
-  // Lista de clientes
-  const [clients, setClients] = useState(() => {
-    try {
-      const saved = localStorage.getItem('autolog_clients');
-      return saved ? JSON.parse(saved) : [
-        { id: 1, name: 'Carlos Silva', site: 'VU Player', login: 'carlos_vu', senha: '123456', expiry: '2026-08-20', status: 'EM USO' },
-        { id: 2, name: 'Ana Souza', site: 'IBO Player', login: 'ana_ibo', senha: '123456', expiry: '2026-08-30', status: 'EM USO' }
-      ];
-    } catch (e) {
-      return [];
-    }
-  });
+  // Lista de clientes vinda do Supabase
+  const [clients, setClients] = useState([]);
+  const [loadingClients, setLoadingClients] = useState(false);
 
   // Estados de busca e filtro por aplicativo
   const [searchTerm, setSearchTerm] = useState('');
@@ -58,9 +49,37 @@ function App() {
   const [editingSite, setEditingSite] = useState(null);
   const [deleteSiteModal, setDeleteSiteModal] = useState(null);
 
+  // --- INTEGRAÇÃO SUPABASE: CARREGAR CLIENTES ---
+  const carregarClientes = async () => {
+    setLoadingClients(true);
+    const { data, error } = await supabase
+      .from('clientes')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Erro ao buscar clientes no Supabase:', error);
+    } else if (data) {
+      // Mapeia os campos da tabela Supabase para os campos esperados pelo frontend
+      const mappedClients = data.map(item => ({
+        id: item.id,
+        name: item.nome || '',
+        site: item.app || '',
+        login: item.mac || '',
+        senha: item.key || '',
+        expiry: item.vencimento || '',
+        url: item.url || ''
+      }));
+      setClients(mappedClients);
+    }
+    setLoadingClients(false);
+  };
+
   useEffect(() => {
-    localStorage.setItem('autolog_clients', JSON.stringify(clients));
-  }, [clients]);
+    if (isAuthenticated) {
+      carregarClientes();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
     localStorage.setItem('autolog_sites_list', JSON.stringify(sites));
@@ -80,10 +99,10 @@ function App() {
 
     try {
       const response = await fetch(`http://${window.location.hostname}:5000/login`, {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json' },
-  body: JSON.stringify({ password: passwordInput })
-});
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ password: passwordInput })
+      });
 
       const data = await response.json();
 
@@ -120,14 +139,27 @@ function App() {
 
   const handleImportBackup = (e) => {
     const fileReader = new FileReader();
-    fileReader.onload = (event) => {
+    fileReader.onload = async (event) => {
       try {
         const imported = JSON.parse(event.target.result);
-        if (imported.clients) setClients(imported.clients);
+        if (imported.clients && Array.isArray(imported.clients)) {
+          // Insere dados de backup no Supabase
+          const formatted = imported.clients.map(c => ({
+            nome: c.name || c.nome,
+            app: c.site || c.app,
+            mac: c.login || c.mac,
+            key: c.senha || c.key,
+            vencimento: c.expiry || c.vencimento
+          }));
+
+          const { error } = await supabase.from('clientes').insert(formatted);
+          if (error) throw error;
+          await carregarClientes();
+        }
         if (imported.sites) setSites(imported.sites);
-        alert("Backup restaurado com sucesso!");
+        alert("Backup restaurado e sincronizado com o Supabase!");
       } catch (err) {
-        alert("Arquivo de backup inválido.");
+        alert("Erro ao importar backup: " + err.message);
       }
     };
     if (e.target.files[0]) {
@@ -138,7 +170,7 @@ function App() {
   // DISPARAR AUTOMAÇÃO PYTHON
   const dispararAutoLogin = async (cliente) => {
     const siteObj = sites.find(s => s.name === cliente.site);
-    const siteUrl = siteObj ? siteObj.url : '';
+    const siteUrl = siteObj ? siteObj.url : cliente.url || '';
 
     try {
       const response = await fetch('http://127.0.0.1:5000/auto-login', {
@@ -163,35 +195,64 @@ function App() {
     }
   };
 
-  // SALVAR / EXCLUIR CLIENTE
-  const handleSaveClient = (e) => {
+  // --- INTEGRAÇÃO SUPABASE: SALVAR / EDITAR CLIENTE ---
+  const handleSaveClient = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
-    const clientData = {
-      id: editingClient ? editingClient.id : Date.now(),
-      name: formData.get('name') || '',
-      site: formData.get('site') || (sites[0] ? sites[0].name : ''),
-      login: formData.get('login') || '',
-      senha: formData.get('senha') || '',
-      expiry: formData.get('expiry') || '',
-      status: formData.get('status') || 'LIVRE'
+    
+    const dbPayload = {
+      nome: formData.get('name') || '',
+      app: formData.get('site') || (sites[0] ? sites[0].name : ''),
+      mac: formData.get('login') || '',
+      key: formData.get('senha') || '',
+      vencimento: formData.get('expiry') || null
     };
 
     if (editingClient) {
-      setClients(clients.map(c => c.id === editingClient.id ? clientData : c));
+      // Atualizar no Supabase
+      const { error } = await supabase
+        .from('clientes')
+        .update(dbPayload)
+        .eq('id', editingClient.id);
+
+      if (error) {
+        alert('Erro ao atualizar no banco: ' + error.message);
+      } else {
+        await carregarClientes();
+      }
     } else {
-      setClients([...clients, clientData]);
+      // Inserir novo no Supabase
+      const { error } = await supabase
+        .from('clientes')
+        .insert([dbPayload]);
+
+      if (error) {
+        alert('Erro ao salvar no banco: ' + error.message);
+      } else {
+        await carregarClientes();
+      }
     }
+
     setClientModalOpen(false);
     setEditingClient(null);
   };
 
-  const handleDeleteClient = (id) => {
-    setClients(clients.filter(c => c.id !== id));
+  // --- INTEGRAÇÃO SUPABASE: EXCLUIR CLIENTE ---
+  const handleDeleteClient = async (id) => {
+    const { error } = await supabase
+      .from('clientes')
+      .delete()
+      .eq('id', id);
+
+    if (error) {
+      alert('Erro ao deletar no Supabase: ' + error.message);
+    } else {
+      await carregarClientes();
+    }
     setDeleteClientModal(null);
   };
 
-  // SALVAR / EXCLUIR SITE
+  // SALVAR / EXCLUIR SITE LOCALMENTE
   const handleSaveSite = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -354,7 +415,10 @@ function App() {
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
           <div className="space-y-8">
-            <h2 className="text-2xl font-bold text-white">Dashboard & Métricas</h2>
+            <div className="flex justify-between items-center">
+              <h2 className="text-2xl font-bold text-white">Dashboard & Métricas</h2>
+              {loadingClients && <span className="text-xs text-blue-400 animate-pulse">Sincronizando Supabase...</span>}
+            </div>
 
             {/* CARDS RESUMO */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -415,7 +479,7 @@ function App() {
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
                         <div>
                           <p className="font-medium text-sm text-white">{c.name}</p>
-                          <p className="text-xs text-slate-400">{c.site} • Venceu em {c.expiry.split('-').reverse().join('/')}</p>
+                          <p className="text-xs text-slate-400">{c.site} • Venceu em {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
                         </div>
                         <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
                           ⚡ Logar
@@ -440,7 +504,7 @@ function App() {
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
                         <div>
                           <p className="font-medium text-sm text-white">{c.name}</p>
-                          <p className="text-xs text-slate-400">{c.site} • Vence em {c.expiry.split('-').reverse().join('/')}</p>
+                          <p className="text-xs text-slate-400">{c.site} • Vence em {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
                         </div>
                         <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
                           ⚡ Logar
@@ -526,7 +590,7 @@ function App() {
                   {filteredClients.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="py-8 text-center text-slate-500">
-                        Nenhum cliente encontrado.
+                        {loadingClients ? 'Carregando do Supabase...' : 'Nenhum cliente encontrado.'}
                       </td>
                     </tr>
                   ) : (
@@ -605,7 +669,7 @@ function App() {
         )}
       </main>
 
-      {/* MODAIS MANTIDOS */}
+      {/* MODAL DE CLIENTES */}
       {clientModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -631,18 +695,9 @@ function App() {
                   <input name="senha" defaultValue={editingClient ? editingClient.senha : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Validade</label>
-                  <input type="date" name="expiry" defaultValue={editingClient ? editingClient.expiry : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
-                </div>
-                <div>
-                  <label className="block text-xs text-slate-400 mb-1">Status</label>
-                  <select name="status" defaultValue={editingClient ? editingClient.status : 'LIVRE'} className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-                    <option value="LIVRE">LIVRE</option>
-                    <option value="EM USO">EM USO</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-xs text-slate-400 mb-1">Validade</label>
+                <input type="date" name="expiry" defaultValue={editingClient ? editingClient.expiry : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>
               <div className="flex justify-end space-x-3 pt-4">
                 <button type="button" onClick={() => { setClientModalOpen(false); setEditingClient(null); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
@@ -653,6 +708,7 @@ function App() {
         </div>
       )}
 
+      {/* MODAL DE SITES */}
       {siteModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -675,11 +731,12 @@ function App() {
         </div>
       )}
 
+      {/* MODAL CONFIRMAR EXCLUSÃO CLIENTE */}
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
             <h3 className="text-lg font-bold text-white">Excluir cliente?</h3>
-            <p className="text-xs text-slate-400">Essa ação não pode ser desfeita.</p>
+            <p className="text-xs text-slate-400">Essa ação removerá o registro do Supabase.</p>
             <div className="flex justify-center space-x-3 pt-2">
               <button onClick={() => setDeleteClientModal(null)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
               <button onClick={() => handleDeleteClient(deleteClientModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Excluir</button>
@@ -688,6 +745,7 @@ function App() {
         </div>
       )}
 
+      {/* MODAL CONFIRMAR EXCLUSÃO SITE */}
       {deleteSiteModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
