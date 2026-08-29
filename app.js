@@ -4,10 +4,9 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
-  // Autenticação
-  const [isAuthenticated, setIsAuthenticated] = useState(
-    sessionStorage.getItem('autolog_auth') === 'true'
-  );
+  // Autenticação Supabase
+  const [session, setSession] = useState(null);
+  const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
   const [loginError, setLoginError] = useState('');
   const [loadingLogin, setLoadingLogin] = useState(false);
@@ -49,6 +48,19 @@ function App() {
   const [editingSite, setEditingSite] = useState(null);
   const [deleteSiteModal, setDeleteSiteModal] = useState(null);
 
+  // VERIFICAR SESSÃO DO SUPABASE AO CARREGAR
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
   // --- INTEGRAÇÃO SUPABASE: CARREGAR CLIENTES ---
   const carregarClientes = async () => {
     setLoadingClients(true);
@@ -75,10 +87,10 @@ function App() {
   };
 
   useEffect(() => {
-    if (isAuthenticated) {
+    if (session) {
       carregarClientes();
     }
-  }, [isAuthenticated]);
+  }, [session]);
 
   useEffect(() => {
     localStorage.setItem('autolog_sites_list', JSON.stringify(sites));
@@ -88,30 +100,32 @@ function App() {
     if (window.lucide) {
       window.lucide.createIcons();
     }
-  }, [isAuthenticated, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
+  }, [session, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
 
-  // LOGIN DIRETO NO FRONTEND
-  const handleLoginSubmit = (e) => {
+  // LOGIN VIA SUPABASE AUTH
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
     setLoadingLogin(true);
 
-    // Altere 'admin123' para a senha que você preferir
-    const MASTER_PASSWORD = 'Andre96075729';
+    const { error } = await supabase.auth.signInWithPassword({
+      email: emailInput,
+      password: passwordInput,
+    });
 
-    if (passwordInput === MASTER_PASSWORD) {
-      sessionStorage.setItem('autolog_auth', 'true');
-      setIsAuthenticated(true);
-      setPasswordInput('');
+    if (error) {
+      setLoginError('E-mail ou senha incorretos!');
     } else {
-      setLoginError('Senha incorreta!');
+      setEmailInput('');
+      setPasswordInput('');
     }
     setLoadingLogin(false);
   };
 
-  const handleLogout = () => {
-    sessionStorage.removeItem('autolog_auth');
-    setIsAuthenticated(false);
+  // LOGOUT VIA SUPABASE AUTH
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setSession(null);
   };
 
   // BACKUP
@@ -291,8 +305,8 @@ function App() {
     return matchesSite && matchesSearch;
   });
 
-  // TELA DE LOGIN
-  if (!isAuthenticated) {
+  // TELA DE LOGIN (SUPABASE AUTH)
+  if (!session) {
     return (
       <div className="flex h-screen items-center justify-center bg-[#090d16] p-4 font-sans">
         <div className="w-full max-w-md bg-[#0d1322] border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
@@ -301,27 +315,41 @@ function App() {
               <i data-lucide="shield-check" className="w-8 h-8"></i>
             </div>
             <h1 className="text-2xl font-bold text-white tracking-wider">AUTOLOG <span className="text-blue-500">APPS</span></h1>
-            <p className="text-xs text-slate-400">Digite a senha master para acessar o painel</p>
+            <p className="text-xs text-slate-400">Entre com suas credenciais para acessar o painel</p>
           </div>
 
           <form onSubmit={handleLoginSubmit} className="space-y-4">
             <div>
+              <label className="block text-xs text-slate-400 mb-1">E-mail</label>
+              <input
+                type="email"
+                placeholder="seuemail@exemplo.com"
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                className="w-full bg-[#111827] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-slate-400 mb-1">Senha</label>
               <input
                 type="password"
-                placeholder="Senha de acesso"
+                placeholder="••••••••"
                 value={passwordInput}
                 onChange={(e) => setPasswordInput(e.target.value)}
                 className="w-full bg-[#111827] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
                 required
               />
             </div>
+
             {loginError && <p className="text-xs text-rose-500 text-center font-semibold">{loginError}</p>}
+
             <button
               type="submit"
               disabled={loadingLogin}
               className="w-full bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm"
             >
-              {loadingLogin ? 'Verificando...' : 'Acessar Painel'}
+              {loadingLogin ? 'Autenticando...' : 'Acessar Painel'}
             </button>
           </form>
         </div>
