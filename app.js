@@ -14,7 +14,7 @@ function App() {
     }
   });
 
-  const [customSites] = useState(['IBO Player Pro', 'IBO Player', 'BOB Player', 'VU Player', 'Quick Player']);
+  const customSites = ['IBO Player Pro', 'IBO Player', 'BOB Player', 'VU Player', 'Quick Player'];
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deleteClientModal, setDeleteClientModal] = useState(null);
@@ -29,7 +29,6 @@ function App() {
     }
   }, [activeTab, clients, clientModalOpen, deleteClientModal]);
 
-  // AUTOMAÇÃO PYTHON
   const dispararAutoLogin = async (cliente) => {
     try {
       const response = await fetch('http://127.0.0.1:5000/auto-login', {
@@ -144,8 +143,7 @@ function App() {
                 onClick={() => { setEditingClient(null); setClientModalOpen(true); }}
                 className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 text-sm shadow-lg shadow-blue-600/20"
               >
-                <i data-lucide="plus" className="w-4 h-4"></i>
-                <span>Novo Cliente</span>
+                <span>+ Novo Cliente</span>
               </button>
             </div>
 
@@ -177,13 +175,13 @@ function App() {
                       </td>
                       <td className="py-4 px-6 text-right space-x-2">
                         <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">
-                          <i data-lucide="zap" className="w-4 h-4"></i>
+                          ⚡
                         </button>
                         <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">
-                          <i data-lucide="edit-3" className="w-4 h-4"></i>
+                          ✏️
                         </button>
                         <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">
-                          <i data-lucide="trash-2" className="w-4 h-4"></i>
+                          🗑️
                         </button>
                       </td>
                     </tr>
@@ -247,7 +245,6 @@ function App() {
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
-            <i data-lucide="alert-triangle" className="w-12 h-12 text-rose-500 mx-auto"></i>
             <h3 className="text-lg font-bold text-white">Excluir cliente?</h3>
             <p className="text-xs text-slate-400">Essa ação não pode ser desfeita.</p>
             <div className="flex justify-center space-x-3 pt-2">
