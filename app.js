@@ -115,6 +115,22 @@ function App() {
       }
     } catch (err) {
       setLoginError('Não foi possível conectar ao backend local (app_backend.py).');
+    } font-finally {
+      setLoadingLogin(false);
+    }
+  };
+
+      const data = await response.json();
+
+      if (response.ok && data.status === 'success') {
+        sessionStorage.setItem('autolog_auth', 'true');
+        setIsAuthenticated(true);
+        setPasswordInput('');
+      } else {
+        setLoginError(data.message || 'Senha incorreta!');
+      }
+    } catch (err) {
+      setLoginError('Não foi possível conectar ao backend local (app_backend.py).');
     } finally {
       setLoadingLogin(false);
     }
