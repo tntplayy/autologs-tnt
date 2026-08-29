@@ -1,9 +1,18 @@
 const { useState, useEffect } = React;
 
+const MASTER_PASSWORD = "Andre96075729";
+
 function App() {
-  const [activeTab, setActiveTab] = useState('clientes');
+  // Autenticação
+  const [isAuthenticated, setIsAuthenticated] = useState(
+    sessionStorage.getItem('autolog_auth') === 'true'
+  );
+  const [passwordInput, setPasswordInput] = useState('');
+  const [loginError, setLoginError] = useState('');
+
+  const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Lista de sites cadastrados (com nome e URL)
+  // Lista de sites cadastrados
   const [sites, setSites] = useState(() => {
     try {
       const saved = localStorage.getItem('autolog_sites_list');
@@ -25,8 +34,8 @@ function App() {
     try {
       const saved = localStorage.getItem('autolog_clients');
       return saved ? JSON.parse(saved) : [
-        { id: 1, name: 'Carlos Silva', site: 'VU Player', login: 'carlos_vu', senha: '123456', expiry: '2026-08-24', status: 'EM USO' },
-        { id: 2, name: 'Ana Souza', site: 'IBO Player', login: 'ana_ibo', senha: '123456', expiry: '2026-08-28', status: 'EM USO' }
+        { id: 1, name: 'Carlos Silva', site: 'VU Player', login: 'carlos_vu', senha: '123456', expiry: '2026-08-20', status: 'EM USO' },
+        { id: 2, name: 'Ana Souza', site: 'IBO Player', login: 'ana_ibo', senha: '123456', expiry: '2026-08-30', status: 'EM USO' }
       ];
     } catch (e) {
       return [];
@@ -59,14 +68,28 @@ function App() {
     if (window.lucide) {
       window.lucide.createIcons();
     }
-  }, [activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
+  }, [isAuthenticated, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
 
-  // FUNÇÕES DE BACKUP
+  // LOGIN / LOGOUT
+  const handleLoginSubmit = (e) => {
+    e.preventDefault();
+    if (passwordInput === MASTER_PASSWORD) {
+      sessionStorage.setItem('autolog_auth', 'true');
+      setIsAuthenticated(true);
+      setLoginError('');
+    } else {
+      setLoginError('Senha incorreta!');
+    }
+  };
+
+  const handleLogout = () => {
+    sessionStorage.removeItem('autolog_auth');
+    setIsAuthenticated(false);
+  };
+
+  // BACKUP
   const handleExportBackup = () => {
-    const backupData = {
-      sites,
-      clients
-    };
+    const backupData = { sites, clients };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
     const anchor = document.createElement('a');
     anchor.setAttribute("href", dataStr);
@@ -121,7 +144,7 @@ function App() {
     }
   };
 
-  // SALVAR CLIENTE
+  // SALVAR / EXCLUIR CLIENTE
   const handleSaveClient = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -149,7 +172,7 @@ function App() {
     setDeleteClientModal(null);
   };
 
-  // SALVAR SITE
+  // SALVAR / EXCLUIR SITE
   const handleSaveSite = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -173,7 +196,26 @@ function App() {
     setDeleteSiteModal(null);
   };
 
-  // LÓGICA DE FILTRAGEM DE CLIENTES
+  // LÓGICA DE DATAS E STATUS DO DASHBOARD
+  const today = new Date();
+  today.setHours(0,0,0,0);
+
+  const getClientExpirationInfo = (expiryStr) => {
+    if (!expiryStr) return { status: 'NORMAL', days: 999 };
+    const expDate = new Date(expiryStr + 'T00:00:00');
+    const diffTime = expDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays < 0) return { status: 'VENCIDO', days: diffDays };
+    if (diffDays <= 3) return { status: 'A_VENCER', days: diffDays };
+    return { status: 'ATIVO', days: diffDays };
+  };
+
+  const expiredClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'VENCIDO');
+  const expiringClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'A_VENCER');
+  const activeClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'ATIVO');
+
+  // FILTRAGEM DE CLIENTES
   const filteredClients = clients.filter(c => {
     const matchesSite = selectedSiteFilter === 'ALL' || c.site === selectedSiteFilter;
     const term = searchTerm.toLowerCase();
@@ -182,6 +224,43 @@ function App() {
                           c.senha.toLowerCase().includes(term);
     return matchesSite && matchesSearch;
   });
+
+  // TELA DE LOGIN SE NÃO ESTIVER AUTENTICADO
+  if (!isAuthenticated) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-[#090d16] p-4 font-sans">
+        <div className="w-full max-w-md bg-[#0d1322] border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
+          <div className="text-center space-y-2">
+            <div className="inline-flex p-3 rounded-2xl bg-blue-600/10 text-blue-400 border border-blue-500/20">
+              <i data-lucide="shield-check" className="w-8 h-8"></i>
+            </div>
+            <h1 className="text-2xl font-bold text-white tracking-wider">AUTOLOG <span className="text-blue-500">APPS</span></h1>
+            <p className="text-xs text-slate-400">Digite a senha master para acessar o painel</p>
+          </div>
+
+          <form onSubmit={handleLoginSubmit} className="space-y-4">
+            <div>
+              <input
+                type="password"
+                placeholder="Senha de acesso"
+                value={passwordInput}
+                onChange={(e) => setPasswordInput(e.target.value)}
+                className="w-full bg-[#111827] border border-slate-800 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 placeholder-slate-500"
+                required
+              />
+            </div>
+            {loginError && <p className="text-xs text-rose-500 text-center font-semibold">{loginError}</p>}
+            <button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-500 text-white font-semibold py-3 rounded-xl transition-all shadow-lg shadow-blue-600/20 text-sm"
+            >
+              Acessar Painel
+            </button>
+          </form>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex h-screen bg-[#090d16] text-slate-100 font-sans antialiased">
@@ -224,8 +303,8 @@ function App() {
           </nav>
         </div>
 
-        {/* OPÇÕES DE BACKUP NO RODAPÉ DO MENU */}
-        <div className="p-4 border-t border-slate-800/40 space-y-2">
+        {/* OPÇÕES DE BACKUP E LOGOUT NO RODAPÉ */}
+        <div className="p-4 border-t border-slate-800/40 space-y-1">
           <button 
             onClick={handleExportBackup} 
             className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800/40 hover:text-white rounded-xl transition-all"
@@ -239,6 +318,14 @@ function App() {
             <span>Importar Backup</span>
             <input type="file" onChange={handleImportBackup} className="hidden" accept=".json" />
           </label>
+
+          <button 
+            onClick={handleLogout} 
+            className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all mt-2"
+          >
+            <i data-lucide="log-out" className="w-4 h-4"></i>
+            <span>Sair do Painel</span>
+          </button>
         </div>
       </aside>
 
@@ -246,20 +333,102 @@ function App() {
       <main className="flex-1 overflow-y-auto p-8">
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-6">
-            <h2 className="text-2xl font-bold text-white">Dashboard</h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6">
-                <p className="text-sm font-medium text-slate-400">Total de Clientes</p>
-                <p className="text-3xl font-bold text-white mt-2">{clients.length}</p>
+          <div className="space-y-8">
+            <h2 className="text-2xl font-bold text-white">Dashboard & Métricas</h2>
+
+            {/* CARDS RESUMO */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">TOTAL CLIENTES</p>
+                  <p className="text-2xl font-bold text-white mt-1">{clients.length}</p>
+                </div>
+                <div className="p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20">
+                  <i data-lucide="users" className="w-5 h-5"></i>
+                </div>
               </div>
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6">
-                <p className="text-sm font-medium text-slate-400">Clientes Ativos</p>
-                <p className="text-3xl font-bold text-emerald-400 mt-2">{clients.filter(c => c.status === 'EM USO').length}</p>
+
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">VENCIDOS</p>
+                  <p className="text-2xl font-bold text-rose-500 mt-1">{expiredClients.length}</p>
+                </div>
+                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+                  <i data-lucide="alert-octagon" className="w-5 h-5"></i>
+                </div>
               </div>
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6">
-                <p className="text-sm font-medium text-slate-400">Sites Cadastrados</p>
-                <p className="text-3xl font-bold text-blue-400 mt-2">{sites.length}</p>
+
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">VENCEM EM ≤ 3d</p>
+                  <p className="text-2xl font-bold text-amber-400 mt-1">{expiringClients.length}</p>
+                </div>
+                <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                  <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+                </div>
+              </div>
+
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-slate-400">EM DIA</p>
+                  <p className="text-2xl font-bold text-emerald-400 mt-1">{activeClients.length}</p>
+                </div>
+                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                  <i data-lucide="check-circle" className="w-5 h-5"></i>
+                </div>
+              </div>
+            </div>
+
+            {/* TABELAS DE VENCIDOS E A VENCER */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              {/* CLIENTES VENCIDOS */}
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center space-x-2 text-rose-500">
+                  <i data-lucide="alert-octagon" className="w-5 h-5"></i>
+                  <h3 className="font-semibold text-lg text-white">Clientes Vencidos</h3>
+                </div>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {expiredClients.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-4 text-center">Nenhum cliente vencido.</p>
+                  ) : (
+                    expiredClients.map(c => (
+                      <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
+                        <div>
+                          <p className="font-medium text-sm text-white">{c.name}</p>
+                          <p className="text-xs text-slate-400">{c.site} • Venceu em {c.expiry.split('-').reverse().join('/')}</p>
+                        </div>
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
+                          ⚡ Logar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              {/* CLIENTES A VENCER (<= 3 DIAS) */}
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
+                <div className="flex items-center space-x-2 text-amber-400">
+                  <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+                  <h3 className="font-semibold text-lg text-white">Vencendo nos Próximos 3 Dias</h3>
+                </div>
+                <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
+                  {expiringClients.length === 0 ? (
+                    <p className="text-xs text-slate-500 py-4 text-center">Nenhum cliente a vencer nos próximos dias.</p>
+                  ) : (
+                    expiringClients.map(c => (
+                      <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
+                        <div>
+                          <p className="font-medium text-sm text-white">{c.name}</p>
+                          <p className="text-xs text-slate-400">{c.site} • Vence em {c.expiry.split('-').reverse().join('/')}</p>
+                        </div>
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
+                          ⚡ Logar
+                        </button>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
           </div>
@@ -341,25 +510,34 @@ function App() {
                       </td>
                     </tr>
                   ) : (
-                    filteredClients.map(c => (
-                      <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
-                        <td className="py-4 px-6 font-medium text-white">{c.name}</td>
-                        <td className="py-4 px-6 text-slate-400">{c.site}</td>
-                        <td className="py-4 px-6 font-mono text-xs">{c.login}</td>
-                        <td className="py-4 px-6 font-mono text-xs">{c.senha}</td>
-                        <td className="py-4 px-6 text-slate-400">{c.expiry}</td>
-                        <td className="py-4 px-6 text-center">
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider uppercase ${c.status === 'LIVRE' ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20' : 'bg-purple-500/10 text-purple-400 border border-purple-500/20'}`}>
-                            {c.status}
-                          </span>
-                        </td>
-                        <td className="py-4 px-6 text-right space-x-2">
-                          <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">⚡</button>
-                          <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
-                          <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
-                        </td>
-                      </tr>
-                    ))
+                    filteredClients.map(c => {
+                      const expInfo = getClientExpirationInfo(c.expiry);
+                      return (
+                        <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
+                          <td className="py-4 px-6 font-medium text-white">{c.name}</td>
+                          <td className="py-4 px-6 text-slate-400">{c.site}</td>
+                          <td className="py-4 px-6 font-mono text-xs">{c.login}</td>
+                          <td className="py-4 px-6 font-mono text-xs">{c.senha}</td>
+                          <td className="py-4 px-6 text-slate-400">{c.expiry}</td>
+                          <td className="py-4 px-6 text-center">
+                            {expInfo.status === 'VENCIDO' && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">VENCIDO</span>
+                            )}
+                            {expInfo.status === 'A_VENCER' && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">A VENCER</span>
+                            )}
+                            {expInfo.status === 'ATIVO' && (
+                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ATIVO</span>
+                            )}
+                          </td>
+                          <td className="py-4 px-6 text-right space-x-2">
+                            <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">⚡</button>
+                            <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
+                            <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
+                          </td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
               </table>
@@ -407,7 +585,7 @@ function App() {
         )}
       </main>
 
-      {/* MODAL NOVO / EDITAR CLIENTE */}
+      {/* MODAIS MANTIDOS */}
       {clientModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -455,7 +633,6 @@ function App() {
         </div>
       )}
 
-      {/* MODAL NOVO / EDITAR SITE */}
       {siteModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -478,7 +655,6 @@ function App() {
         </div>
       )}
 
-      {/* MODAL EXCLUIR CLIENTE */}
       {deleteClientModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
@@ -492,7 +668,6 @@ function App() {
         </div>
       )}
 
-      {/* MODAL EXCLUIR SITE */}
       {deleteSiteModal && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
           <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
