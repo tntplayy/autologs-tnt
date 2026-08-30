@@ -4,7 +4,6 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
-  // Autenticação Supabase
   const [session, setSession] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -13,7 +12,6 @@ function App() {
 
   const [activeTab, setActiveTab] = useState('dashboard');
   
-  // Lista de sites cadastrados
   const [sites, setSites] = useState(() => {
     try {
       const saved = localStorage.getItem('autolog_sites_list');
@@ -30,25 +28,20 @@ function App() {
     }
   });
 
-  // Lista de clientes vinda do Supabase
   const [clients, setClients] = useState([]);
   const [loadingClients, setLoadingClients] = useState(false);
 
-  // Estados de busca e filtro por aplicativo
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteFilter, setSelectedSiteFilter] = useState('ALL');
 
-  // Modais de Clientes
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deleteClientModal, setDeleteClientModal] = useState(null);
 
-  // Modais de Sites
   const [siteModalOpen, setSiteModalOpen] = useState(false);
   const [editingSite, setEditingSite] = useState(null);
   const [deleteSiteModal, setDeleteSiteModal] = useState(null);
 
-  // VERIFICAR SESSÃO DO SUPABASE AO CARREGAR
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
@@ -61,7 +54,6 @@ function App() {
     return () => subscription.unsubscribe();
   }, []);
 
-  // --- INTEGRAÇÃO SUPABASE: CARREGAR CLIENTES ---
   const carregarClientes = async () => {
     setLoadingClients(true);
     const { data, error } = await supabase
@@ -102,7 +94,6 @@ function App() {
     }
   }, [session, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
 
-  // LOGIN VIA SUPABASE AUTH
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
     setLoginError('');
@@ -122,13 +113,11 @@ function App() {
     setLoadingLogin(false);
   };
 
-  // LOGOUT VIA SUPABASE AUTH
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setSession(null);
   };
 
-  // BACKUP
   const handleExportBackup = () => {
     const backupData = { sites, clients };
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupData, null, 2));
@@ -169,7 +158,6 @@ function App() {
     }
   };
 
-  // DISPARAR AUTOMAÇÃO PYTHON
   const dispararAutoLogin = async (cliente) => {
     const siteObj = sites.find(s => s.name === cliente.site);
     const siteUrl = siteObj ? siteObj.url : cliente.url || '';
@@ -193,11 +181,10 @@ function App() {
         alert('Erro na automação: ' + data.message);
       }
     } catch (err) {
-      alert('Não foi possível conectar ao servidor local.\n\nVerifique se o "app_backend.py" está rodando no terminal do computador.');
+      alert('A automação via robô só funciona no computador em que o script Python está sendo executado.');
     }
   };
 
-  // --- INTEGRAÇÃO SUPABASE: SALVAR / EDITAR CLIENTE ---
   const handleSaveClient = async (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -237,7 +224,6 @@ function App() {
     setEditingClient(null);
   };
 
-  // --- INTEGRAÇÃO SUPABASE: EXCLUIR CLIENTE ---
   const handleDeleteClient = async (id) => {
     const { error } = await supabase
       .from('clientes')
@@ -252,7 +238,6 @@ function App() {
     setDeleteClientModal(null);
   };
 
-  // SALVAR / EXCLUIR SITE LOCALMENTE
   const handleSaveSite = (e) => {
     e.preventDefault();
     const formData = new FormData(e.target);
@@ -276,7 +261,6 @@ function App() {
     setDeleteSiteModal(null);
   };
 
-  // LÓGICA DE DATAS E STATUS DO DASHBOARD
   const today = new Date();
   today.setHours(0,0,0,0);
 
@@ -295,7 +279,6 @@ function App() {
   const expiringClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'A_VENCER');
   const activeClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'ATIVO');
 
-  // FILTRAGEM DE CLIENTES
   const filteredClients = clients.filter(c => {
     const matchesSite = selectedSiteFilter === 'ALL' || c.site === selectedSiteFilter;
     const term = searchTerm.toLowerCase();
@@ -305,11 +288,10 @@ function App() {
     return matchesSite && matchesSearch;
   });
 
-  // TELA DE LOGIN (SUPABASE AUTH)
   if (!session) {
     return (
-      <div className="flex h-screen items-center justify-center bg-[#090d16] p-4 font-sans">
-        <div className="w-full max-w-md bg-[#0d1322] border border-slate-800 rounded-2xl p-8 shadow-2xl space-y-6">
+      <div className="flex min-h-screen items-center justify-center bg-[#090d16] p-4 font-sans">
+        <div className="w-full max-w-md bg-[#0d1322] border border-slate-800 rounded-2xl p-6 sm:p-8 shadow-2xl space-y-6">
           <div className="text-center space-y-2">
             <div className="inline-flex p-3 rounded-2xl bg-blue-600/10 text-blue-400 border border-blue-500/20">
               <i data-lucide="shield-check" className="w-8 h-8"></i>
@@ -358,9 +340,10 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen bg-[#090d16] text-slate-100 font-sans antialiased">
-      {/* MENU LATERAL */}
-      <aside className="w-64 bg-[#0d1322] border-r border-slate-800/60 flex flex-col justify-between">
+    <div className="flex flex-col md:flex-row h-screen bg-[#090d16] text-slate-100 font-sans antialiased overflow-hidden">
+      
+      {/* NAVEGAÇÃO DESKTOP (SIDEBAR) */}
+      <aside className="hidden md:flex md:w-64 bg-[#0d1322] border-r border-slate-800/60 flex-col justify-between shrink-0">
         <div>
           <div className="p-6 flex items-center space-x-3 border-b border-slate-800/40">
             <div className="bg-blue-600/20 p-2 rounded-xl border border-blue-500/30">
@@ -398,14 +381,13 @@ function App() {
           </nav>
         </div>
 
-        {/* RODAPÉ */}
         <div className="p-4 border-t border-slate-800/40 space-y-1">
           <button 
             onClick={handleExportBackup} 
             className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800/40 hover:text-white rounded-xl transition-all"
           >
             <i data-lucide="download" className="w-4 h-4"></i>
-            <span>Exportar Backup JSON</span>
+            <span>Exportar Backup</span>
           </button>
 
           <label className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-slate-400 hover:bg-slate-800/40 hover:text-white rounded-xl transition-all cursor-pointer">
@@ -419,68 +401,82 @@ function App() {
             className="w-full flex items-center space-x-2 px-3 py-2 text-xs font-medium text-rose-400 hover:bg-rose-500/10 rounded-xl transition-all mt-2"
           >
             <i data-lucide="log-out" className="w-4 h-4"></i>
-            <span>Sair do Painel</span>
+            <span>Sair</span>
           </button>
         </div>
       </aside>
 
-      {/* PAINEL PRINCIPAL */}
-      <main className="flex-1 overflow-y-auto p-8">
+      {/* HEADER MOBILE */}
+      <div className="md:hidden flex items-center justify-between p-4 bg-[#0d1322] border-b border-slate-800/60 shrink-0">
+        <div className="flex items-center space-x-2">
+          <div className="bg-blue-600/20 p-1.5 rounded-lg border border-blue-500/30">
+            <i data-lucide="shield-check" className="w-5 h-5 text-blue-400"></i>
+          </div>
+          <span className="font-bold text-base text-white">AUTOLOG <span className="text-blue-500">APPS</span></span>
+        </div>
+        <button onClick={handleLogout} className="text-rose-400 p-2">
+          <i data-lucide="log-out" className="w-5 h-5"></i>
+        </button>
+      </div>
+
+      {/* CONTEÚDO PRINCIPAL COM SCROLL SEPARADO */}
+      <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
+        
         {/* DASHBOARD */}
         {activeTab === 'dashboard' && (
-          <div className="space-y-8">
+          <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Dashboard & Métricas</h2>
-              {loadingClients && <span className="text-xs text-blue-400 animate-pulse">Sincronizando Supabase...</span>}
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Dashboard</h2>
+              {loadingClients && <span className="text-xs text-blue-400 animate-pulse">Sincronizando...</span>}
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-400">TOTAL CLIENTES</p>
-                  <p className="text-2xl font-bold text-white mt-1">{clients.length}</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">TOTAL</p>
+                  <p className="text-xl sm:text-2xl font-bold text-white mt-1">{clients.length}</p>
                 </div>
-                <div className="p-3 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20">
-                  <i data-lucide="users" className="w-5 h-5"></i>
+                <div className="p-2.5 bg-blue-600/10 text-blue-400 rounded-xl border border-blue-500/20">
+                  <i data-lucide="users" className="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
               </div>
 
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-400">VENCIDOS</p>
-                  <p className="text-2xl font-bold text-rose-500 mt-1">{expiredClients.length}</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">VENCIDOS</p>
+                  <p className="text-xl sm:text-2xl font-bold text-rose-500 mt-1">{expiredClients.length}</p>
                 </div>
-                <div className="p-3 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
-                  <i data-lucide="alert-octagon" className="w-5 h-5"></i>
+                <div className="p-2.5 bg-rose-500/10 text-rose-400 rounded-xl border border-rose-500/20">
+                  <i data-lucide="alert-octagon" className="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
               </div>
 
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-400">VENCEM EM ≤ 3d</p>
-                  <p className="text-2xl font-bold text-amber-400 mt-1">{expiringClients.length}</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">VENCEM ≤ 3D</p>
+                  <p className="text-xl sm:text-2xl font-bold text-amber-400 mt-1">{expiringClients.length}</p>
                 </div>
-                <div className="p-3 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
-                  <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+                <div className="p-2.5 bg-amber-500/10 text-amber-400 rounded-xl border border-amber-500/20">
+                  <i data-lucide="alert-triangle" className="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
               </div>
 
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 flex items-center justify-between">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-4 flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-slate-400">EM DIA</p>
-                  <p className="text-2xl font-bold text-emerald-400 mt-1">{activeClients.length}</p>
+                  <p className="text-[10px] sm:text-xs font-medium text-slate-400">EM DIA</p>
+                  <p className="text-xl sm:text-2xl font-bold text-emerald-400 mt-1">{activeClients.length}</p>
                 </div>
-                <div className="p-3 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
-                  <i data-lucide="check-circle" className="w-5 h-5"></i>
+                <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-xl border border-emerald-500/20">
+                  <i data-lucide="check-circle" className="w-4 h-4 sm:w-5 sm:h-5"></i>
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-rose-500">
                   <i data-lucide="alert-octagon" className="w-5 h-5"></i>
-                  <h3 className="font-semibold text-lg text-white">Clientes Vencidos</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-white">Clientes Vencidos</h3>
                 </div>
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {expiredClients.length === 0 ? (
@@ -488,12 +484,12 @@ function App() {
                   ) : (
                     expiredClients.map(c => (
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
-                        <div>
-                          <p className="font-medium text-sm text-white">{c.name}</p>
-                          <p className="text-xs text-slate-400">{c.site} • Venceu em {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
+                        <div className="overflow-hidden mr-2">
+                          <p className="font-medium text-sm text-white truncate">{c.name}</p>
+                          <p className="text-xs text-slate-400 truncate">{c.site} • {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
                         </div>
-                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
-                          ⚡ Logar
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
+                          ⚡
                         </button>
                       </div>
                     ))
@@ -501,10 +497,10 @@ function App() {
                 </div>
               </div>
 
-              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-6 space-y-4">
+              <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-amber-400">
                   <i data-lucide="alert-triangle" className="w-5 h-5"></i>
-                  <h3 className="font-semibold text-lg text-white">Vencendo nos Próximos 3 Dias</h3>
+                  <h3 className="font-semibold text-base sm:text-lg text-white">Vencendo nos Próximos 3 Dias</h3>
                 </div>
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
                   {expiringClients.length === 0 ? (
@@ -512,12 +508,12 @@ function App() {
                   ) : (
                     expiringClients.map(c => (
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
-                        <div>
-                          <p className="font-medium text-sm text-white">{c.name}</p>
-                          <p className="text-xs text-slate-400">{c.site} • Vence em {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
+                        <div className="overflow-hidden mr-2">
+                          <p className="font-medium text-sm text-white truncate">{c.name}</p>
+                          <p className="text-xs text-slate-400 truncate">{c.site} • {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
                         </div>
-                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs">
-                          ⚡ Logar
+                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
+                          ⚡
                         </button>
                       </div>
                     ))
@@ -532,23 +528,33 @@ function App() {
         {activeTab === 'clientes' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Clientes</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Clientes</h2>
               <button 
                 onClick={() => { setEditingClient(null); setClientModalOpen(true); }}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 text-sm shadow-lg shadow-blue-600/20"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-3.5 py-2 rounded-xl transition-all flex items-center space-x-1.5 text-xs sm:text-sm shadow-lg shadow-blue-600/20"
               >
                 <span>+ Novo Cliente</span>
               </button>
             </div>
 
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-              <div className="flex items-center space-x-2 overflow-x-auto pb-2 md:pb-0">
+            <div className="flex flex-col gap-3">
+              <div className="w-full">
+                <input
+                  type="text"
+                  placeholder="Buscar nome, MAC ou senha..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full bg-[#0d1322] border border-slate-800 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 overflow-x-auto pb-1 max-w-full scrollbar-none">
                 <button
                   onClick={() => setSelectedSiteFilter('ALL')}
                   className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                     selectedSiteFilter === 'ALL'
                       ? 'bg-blue-600 border-blue-500 text-white'
-                      : 'bg-[#0d1322] border-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-[#0d1322] border-slate-800 text-slate-400'
                   }`}
                 >
                   Todos ({clients.length})
@@ -562,7 +568,7 @@ function App() {
                       className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all border ${
                         selectedSiteFilter === s.name
                           ? 'bg-blue-600 border-blue-500 text-white'
-                          : 'bg-[#0d1322] border-slate-800 text-slate-400 hover:text-white'
+                          : 'bg-[#0d1322] border-slate-800 text-slate-400'
                       }`}
                     >
                       {s.name} ({count})
@@ -570,36 +576,26 @@ function App() {
                   );
                 })}
               </div>
-
-              <div className="w-full md:w-64">
-                <input
-                  type="text"
-                  placeholder="Buscar nome, MAC ou senha..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full bg-[#0d1322] border border-slate-800 rounded-xl px-4 py-2 text-sm text-white focus:outline-none focus:border-blue-500"
-                />
-              </div>
             </div>
 
-            <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-x-auto shadow-xl">
+              <table className="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[600px]">
                 <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60">
                   <tr>
-                    <th className="py-4 px-6">Nome</th>
-                    <th className="py-4 px-6">Site</th>
-                    <th className="py-4 px-6">Login / MAC</th>
-                    <th className="py-4 px-6">Senha / Key</th>
-                    <th className="py-4 px-6">Validade</th>
-                    <th className="py-4 px-6 text-center">Status</th>
-                    <th className="py-4 px-6 text-right">Ações</th>
+                    <th className="py-3 px-4">Nome</th>
+                    <th className="py-3 px-4">Site</th>
+                    <th className="py-3 px-4">Login / MAC</th>
+                    <th className="py-3 px-4">Senha / Key</th>
+                    <th className="py-3 px-4">Validade</th>
+                    <th className="py-3 px-4 text-center">Status</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/40">
                   {filteredClients.length === 0 ? (
                     <tr>
                       <td colSpan="7" className="py-8 text-center text-slate-500">
-                        {loadingClients ? 'Carregando do Supabase...' : 'Nenhum cliente encontrado.'}
+                        {loadingClients ? 'Carregando...' : 'Nenhum cliente encontrado.'}
                       </td>
                     </tr>
                   ) : (
@@ -607,26 +603,26 @@ function App() {
                       const expInfo = getClientExpirationInfo(c.expiry);
                       return (
                         <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
-                          <td className="py-4 px-6 font-medium text-white">{c.name}</td>
-                          <td className="py-4 px-6 text-slate-400">{c.site}</td>
-                          <td className="py-4 px-6 font-mono text-xs">{c.login}</td>
-                          <td className="py-4 px-6 font-mono text-xs">{c.senha}</td>
-                          <td className="py-4 px-6 text-slate-400">{c.expiry}</td>
-                          <td className="py-4 px-6 text-center">
+                          <td className="py-3 px-4 font-medium text-white">{c.name}</td>
+                          <td className="py-3 px-4 text-slate-400">{c.site}</td>
+                          <td className="py-3 px-4 font-mono text-[11px]">{c.login}</td>
+                          <td className="py-3 px-4 font-mono text-[11px]">{c.senha}</td>
+                          <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{c.expiry}</td>
+                          <td className="py-3 px-4 text-center whitespace-nowrap">
                             {expInfo.status === 'VENCIDO' && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">VENCIDO</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">VENCIDO</span>
                             )}
                             {expInfo.status === 'A_VENCER' && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">A VENCER</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-amber-500/10 text-amber-400 border border-amber-500/20">A VENCER</span>
                             )}
                             {expInfo.status === 'ATIVO' && (
-                              <span className="px-2.5 py-1 rounded-full text-[10px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ATIVO</span>
+                              <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">ATIVO</span>
                             )}
                           </td>
-                          <td className="py-4 px-6 text-right space-x-2">
-                            <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 transition-colors p-1">⚡</button>
-                            <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
-                            <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
+                          <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                            <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 p-1">⚡</button>
+                            <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 p-1">✏️</button>
+                            <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 p-1">🗑️</button>
                           </td>
                         </tr>
                       );
@@ -642,32 +638,32 @@ function App() {
         {activeTab === 'sites' && (
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-2xl font-bold text-white">Sites Cadastrados</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-white">Sites Cadastrados</h2>
               <button 
                 onClick={() => { setEditingSite(null); setSiteModalOpen(true); }}
-                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2.5 rounded-xl transition-all flex items-center space-x-2 text-sm shadow-lg shadow-blue-600/20"
+                className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-3.5 py-2 rounded-xl transition-all flex items-center space-x-1.5 text-xs sm:text-sm shadow-lg shadow-blue-600/20"
               >
                 <span>+ Adicionar Site</span>
               </button>
             </div>
 
-            <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-hidden shadow-xl">
-              <table className="w-full text-left text-sm text-slate-300">
+            <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-x-auto shadow-xl">
+              <table className="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[500px]">
                 <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60">
                   <tr>
-                    <th className="py-4 px-6">Nome do Site / App</th>
-                    <th className="py-4 px-6">URL de Login</th>
-                    <th className="py-4 px-6 text-right">Ações</th>
+                    <th className="py-3 px-4">Nome do Aplicativo</th>
+                    <th className="py-3 px-4">URL de Login</th>
+                    <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-800/40">
                   {sites.map(s => (
                     <tr key={s.id} className="hover:bg-slate-800/20 transition-colors">
-                      <td className="py-4 px-6 font-medium text-white">{s.name}</td>
-                      <td className="py-4 px-6 font-mono text-xs text-blue-400">{s.url}</td>
-                      <td className="py-4 px-6 text-right space-x-2">
-                        <button onClick={() => { setEditingSite(s); setSiteModalOpen(true); }} className="text-slate-400 hover:text-blue-400 transition-colors p-1">✏️</button>
-                        <button onClick={() => setDeleteSiteModal(s.id)} className="text-slate-400 hover:text-rose-400 transition-colors p-1">🗑️</button>
+                      <td className="py-3 px-4 font-medium text-white">{s.name}</td>
+                      <td className="py-3 px-4 font-mono text-blue-400 truncate max-w-[200px]">{s.url}</td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                        <button onClick={() => { setEditingSite(s); setSiteModalOpen(true); }} className="text-slate-400 hover:text-blue-400 p-1">✏️</button>
+                        <button onClick={() => setDeleteSiteModal(s.id)} className="text-slate-400 hover:text-rose-400 p-1">🗑️</button>
                       </td>
                     </tr>
                   ))}
@@ -678,12 +674,39 @@ function App() {
         )}
       </main>
 
+      {/* NAVEGAÇÃO MOBILE (NAVBAR INFERIOR ESTILO APP) */}
+      <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0d1322] border-t border-slate-800/80 flex justify-around p-2 z-40">
+        <button 
+          onClick={() => setActiveTab('dashboard')} 
+          className={`flex flex-col items-center py-1 px-3 rounded-xl ${activeTab === 'dashboard' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}
+        >
+          <i data-lucide="layout-dashboard" className="w-5 h-5"></i>
+          <span className="text-[10px] mt-1">Dashboard</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('clientes')} 
+          className={`flex flex-col items-center py-1 px-3 rounded-xl ${activeTab === 'clientes' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}
+        >
+          <i data-lucide="users" className="w-5 h-5"></i>
+          <span className="text-[10px] mt-1">Clientes</span>
+        </button>
+
+        <button 
+          onClick={() => setActiveTab('sites')} 
+          className={`flex flex-col items-center py-1 px-3 rounded-xl ${activeTab === 'sites' ? 'text-blue-400 font-bold' : 'text-slate-400'}`}
+        >
+          <i data-lucide="globe" className="w-5 h-5"></i>
+          <span className="text-[10px] mt-1">Sites</span>
+        </button>
+      </nav>
+
       {/* MODAL DE CLIENTES */}
       {clientModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-xl font-bold text-white">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h3>
-            <form onSubmit={handleSaveClient} className="space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">{editingClient ? 'Editar Cliente' : 'Novo Cliente'}</h3>
+            <form onSubmit={handleSaveClient} className="space-y-3">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Nome</label>
                 <input name="name" defaultValue={editingClient ? editingClient.name : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
@@ -708,9 +731,9 @@ function App() {
                 <label className="block text-xs text-slate-400 mb-1">Validade</label>
                 <input type="date" name="expiry" defaultValue={editingClient ? editingClient.expiry : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => { setClientModalOpen(false); setEditingClient(null); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Salvar</button>
+              <div className="flex justify-end space-x-2 pt-3">
+                <button type="button" onClick={() => { setClientModalOpen(false); setEditingClient(null); }} className="px-4 py-2 rounded-xl text-xs text-slate-400">Cancelar</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-xs">Salvar</button>
               </div>
             </form>
           </div>
@@ -719,21 +742,21 @@ function App() {
 
       {/* MODAL DE SITES */}
       {siteModalOpen && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
-            <h3 className="text-xl font-bold text-white">{editingSite ? 'Editar Site' : 'Novo Site'}</h3>
-            <form onSubmit={handleSaveSite} className="space-y-4">
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-md p-5 sm:p-6 space-y-4 shadow-2xl">
+            <h3 className="text-lg font-bold text-white">{editingSite ? 'Editar Site' : 'Novo Site'}</h3>
+            <form onSubmit={handleSaveSite} className="space-y-3">
               <div>
                 <label className="block text-xs text-slate-400 mb-1">Nome do Aplicativo</label>
-                <input name="name" defaultValue={editingSite ? editingSite.name : ''} placeholder="Ex: VU Player Pro" required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                <input name="name" defaultValue={editingSite ? editingSite.name : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>
               <div>
                 <label className="block text-xs text-slate-400 mb-1">URL da Página de Login</label>
-                <input name="url" defaultValue={editingSite ? editingSite.url : ''} placeholder="https://exemplo.com/login" required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                <input name="url" defaultValue={editingSite ? editingSite.url : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
               </div>
-              <div className="flex justify-end space-x-3 pt-4">
-                <button type="button" onClick={() => { setSiteModalOpen(false); setEditingSite(null); }} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
-                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Salvar</button>
+              <div className="flex justify-end space-x-2 pt-3">
+                <button type="button" onClick={() => { setSiteModalOpen(false); setEditingSite(null); }} className="px-4 py-2 rounded-xl text-xs text-slate-400">Cancelar</button>
+                <button type="submit" className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-4 py-2 rounded-xl text-xs">Salvar</button>
               </div>
             </form>
           </div>
@@ -742,13 +765,12 @@ function App() {
 
       {/* MODAL EXCLUIR CLIENTE */}
       {deleteClientModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
-            <h3 className="text-lg font-bold text-white">Excluir cliente?</h3>
-            <p className="text-xs text-slate-400">Essa ação removerá o registro do Supabase.</p>
-            <div className="flex justify-center space-x-3 pt-2">
-              <button onClick={() => setDeleteClientModal(null)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
-              <button onClick={() => handleDeleteClient(deleteClientModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Excluir</button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-xs p-5 space-y-3 text-center">
+            <h3 className="text-base font-bold text-white">Excluir cliente?</h3>
+            <div className="flex justify-center space-x-2 pt-2">
+              <button onClick={() => setDeleteClientModal(null)} className="px-3 py-1.5 rounded-xl text-xs text-slate-400">Cancelar</button>
+              <button onClick={() => handleDeleteClient(deleteClientModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3 py-1.5 rounded-xl text-xs">Excluir</button>
             </div>
           </div>
         </div>
@@ -756,13 +778,12 @@ function App() {
 
       {/* MODAL EXCLUIR SITE */}
       {deleteSiteModal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-sm p-6 space-y-4 text-center">
-            <h3 className="text-lg font-bold text-white">Excluir site?</h3>
-            <p className="text-xs text-slate-400">Essa ação não pode ser desfeita.</p>
-            <div className="flex justify-center space-x-3 pt-2">
-              <button onClick={() => setDeleteSiteModal(null)} className="px-4 py-2 rounded-xl text-sm text-slate-400 hover:text-white">Cancelar</button>
-              <button onClick={() => handleDeleteSite(deleteSiteModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-4 py-2 rounded-xl text-sm">Excluir</button>
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+          <div className="bg-[#0d1322] border border-slate-800 rounded-2xl w-full max-w-xs p-5 space-y-3 text-center">
+            <h3 className="text-base font-bold text-white">Excluir site?</h3>
+            <div className="flex justify-center space-x-2 pt-2">
+              <button onClick={() => setDeleteSiteModal(null)} className="px-3 py-1.5 rounded-xl text-xs text-slate-400">Cancelar</button>
+              <button onClick={() => handleDeleteSite(deleteSiteModal)} className="bg-rose-600 hover:bg-rose-500 text-white font-medium px-3 py-1.5 rounded-xl text-xs">Excluir</button>
             </div>
           </div>
         </div>
