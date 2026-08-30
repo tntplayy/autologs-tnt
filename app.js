@@ -34,6 +34,10 @@ function App() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedSiteFilter, setSelectedSiteFilter] = useState('ALL');
 
+  // ESTADO DE ORDENAÇÃO
+  const [sortField, setSortField] = useState('name'); // 'name' ou 'expiry'
+  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' ou 'desc'
+
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
   const [deleteClientModal, setDeleteClientModal] = useState(null);
@@ -92,7 +96,7 @@ function App() {
     if (window.lucide) {
       window.lucide.createIcons();
     }
-  }, [session, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm]);
+  }, [session, activeTab, clients, sites, clientModalOpen, siteModalOpen, selectedSiteFilter, searchTerm, sortField, sortDirection]);
 
   const handleLoginSubmit = async (e) => {
     e.preventDefault();
@@ -279,14 +283,39 @@ function App() {
   const expiringClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'A_VENCER');
   const activeClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'ATIVO');
 
-  const filteredClients = clients.filter(c => {
-    const matchesSite = selectedSiteFilter === 'ALL' || c.site === selectedSiteFilter;
-    const term = searchTerm.toLowerCase();
-    const matchesSearch = c.name.toLowerCase().includes(term) ||
-                          c.login.toLowerCase().includes(term) ||
-                          c.senha.toLowerCase().includes(term);
-    return matchesSite && matchesSearch;
-  });
+  // FUNÇÃO DE ALTERNÂNCIA DE ORDENAÇÃO
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  // FILTRAGEM E ORDENAÇÃO DINÂMICA
+  const filteredClients = clients
+    .filter(c => {
+      const matchesSite = selectedSiteFilter === 'ALL' || c.site === selectedSiteFilter;
+      const term = searchTerm.toLowerCase();
+      const matchesSearch = c.name.toLowerCase().includes(term) ||
+                            c.login.toLowerCase().includes(term) ||
+                            c.senha.toLowerCase().includes(term);
+      return matchesSite && matchesSearch;
+    })
+    .sort((a, b) => {
+      let valA = a[sortField] || '';
+      let valB = b[sortField] || '';
+
+      if (sortField === 'name') {
+        valA = valA.toLowerCase();
+        valB = valB.toLowerCase();
+      }
+
+      if (valA < valB) return sortDirection === 'asc' ? -1 : 1;
+      if (valA > valB) return sortDirection === 'asc' ? 1 : -1;
+      return 0;
+    });
 
   if (!session) {
     return (
@@ -342,7 +371,7 @@ function App() {
   return (
     <div className="flex flex-col md:flex-row h-screen bg-[#090d16] text-slate-100 font-sans antialiased overflow-hidden">
       
-      {/* NAVEGAÇÃO DESKTOP (SIDEBAR) */}
+      {/* NAVEGAÇÃO DESKTOP */}
       <aside className="hidden md:flex md:w-64 bg-[#0d1322] border-r border-slate-800/60 flex-col justify-between shrink-0">
         <div>
           <div className="p-6 flex items-center space-x-3 border-b border-slate-800/40">
@@ -419,7 +448,7 @@ function App() {
         </button>
       </div>
 
-      {/* CONTEÚDO PRINCIPAL COM SCROLL SEPARADO */}
+      {/* CONTEÚDO PRINCIPAL */}
       <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
         
         {/* DASHBOARD */}
@@ -580,13 +609,38 @@ function App() {
 
             <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl overflow-x-auto shadow-xl">
               <table className="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[600px]">
-                <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60">
+                <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60 select-none">
                   <tr>
-                    <th className="py-3 px-4">Nome</th>
+                    {/* COLUNA NOME CLICÁVEL */}
+                    <th 
+                      onClick={() => handleSort('name')} 
+                      className="py-3 px-4 cursor-pointer hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Nome</span>
+                        {sortField === 'name' && (
+                          <span className="text-blue-400 font-bold">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-4">Site</th>
                     <th className="py-3 px-4">Login / MAC</th>
                     <th className="py-3 px-4">Senha / Key</th>
-                    <th className="py-3 px-4">Validade</th>
+
+                    {/* COLUNA VALIDADE CLICÁVEL */}
+                    <th 
+                      onClick={() => handleSort('expiry')} 
+                      className="py-3 px-4 cursor-pointer hover:text-white transition-colors"
+                    >
+                      <div className="flex items-center space-x-1">
+                        <span>Validade</span>
+                        {sortField === 'expiry' && (
+                          <span className="text-blue-400 font-bold">{sortDirection === 'asc' ? '↑' : '↓'}</span>
+                        )}
+                      </div>
+                    </th>
+
                     <th className="py-3 px-4 text-center">Status</th>
                     <th className="py-3 px-4 text-right">Ações</th>
                   </tr>
@@ -674,7 +728,7 @@ function App() {
         )}
       </main>
 
-      {/* NAVEGAÇÃO MOBILE (NAVBAR INFERIOR ESTILO APP) */}
+      {/* NAVEGAÇÃO MOBILE */}
       <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-[#0d1322] border-t border-slate-800/80 flex justify-around p-2 z-40">
         <button 
           onClick={() => setActiveTab('dashboard')} 
