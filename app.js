@@ -4,6 +4,15 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
+  const formatDateBR = (dateStr) => {
+  if (!dateStr) return 'N/A';
+  // Se a data já estiver em YYYY-MM-DD
+  const [year, month, day] = dateStr.split('-');
+  if (year && month && day) {
+    return `${day}/${month}/${year}`;
+  }
+  return dateStr;
+};
   const [session, setSession] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -515,7 +524,7 @@ function App() {
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
                         <div className="overflow-hidden mr-2">
                           <p className="font-medium text-sm text-white truncate">{c.name}</p>
-                          <p className="text-xs text-slate-400 truncate">{c.site} • {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
+                          <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
                         <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
                           ⚡
@@ -539,7 +548,7 @@ function App() {
                       <div key={c.id} className="flex items-center justify-between bg-[#111827] p-3 rounded-xl border border-slate-800">
                         <div className="overflow-hidden mr-2">
                           <p className="font-medium text-sm text-white truncate">{c.name}</p>
-                          <p className="text-xs text-slate-400 truncate">{c.site} • {c.expiry ? c.expiry.split('-').reverse().join('/') : 'N/A'}</p>
+                          <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
                         <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
                           ⚡
@@ -661,7 +670,7 @@ function App() {
                           <td className="py-3 px-4 text-slate-400">{c.site}</td>
                           <td className="py-3 px-4 font-mono text-[11px]">{c.login}</td>
                           <td className="py-3 px-4 font-mono text-[11px]">{c.senha}</td>
-                          <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{c.expiry}</td>
+                          <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{formatDateBR(c.expiry)}</td>
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {expInfo.status === 'VENCIDO' && (
                               <span className="px-2 py-0.5 rounded-full text-[9px] font-bold uppercase bg-rose-500/10 text-rose-400 border border-rose-500/20">VENCIDO</span>
