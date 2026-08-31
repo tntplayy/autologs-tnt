@@ -548,7 +548,7 @@ function App() {
               {/* CARD VENCENDO NOS PRÓXIMOS 3 DIAS */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-amber-400">
-                  <i data-lucide="alert-triangle" className="w-5 h-5"></i>
+                  <i data-lucide="search" className="w-4 h-4"></i>
                   <h3 className="font-semibold text-base sm:text-lg text-white">Vencendo nos Próximos 3 Dias</h3>
                 </div>
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
