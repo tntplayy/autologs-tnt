@@ -4,20 +4,6 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
-  const irParaCliente = (nomeCliente) => {
-    setSelectedSiteFilter('ALL');
-    setSearchTerm(nomeCliente);
-    setActiveTab('clientes');
-  };
-  const formatDateBR = (dateStr) => {
-  if (!dateStr) return 'N/A';
-  // Se a data já estiver em YYYY-MM-DD
-  const [year, month, day] = dateStr.split('-');
-  if (year && month && day) {
-    return `${day}/${month}/${year}`;
-  }
-  return dateStr;
-};
   const [session, setSession] = useState(null);
   const [emailInput, setEmailInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -49,8 +35,8 @@ function App() {
   const [selectedSiteFilter, setSelectedSiteFilter] = useState('ALL');
 
   // ESTADO DE ORDENAÇÃO
-  const [sortField, setSortField] = useState('name'); // 'name' ou 'expiry'
-  const [sortDirection, setSortDirection] = useState('asc'); // 'asc' ou 'desc'
+  const [sortField, setSortField] = useState('name');
+  const [sortDirection, setSortDirection] = useState('asc');
 
   const [clientModalOpen, setClientModalOpen] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
@@ -59,6 +45,20 @@ function App() {
   const [siteModalOpen, setSiteModalOpen] = useState(false);
   const [editingSite, setEditingSite] = useState(null);
   const [deleteSiteModal, setDeleteSiteModal] = useState(null);
+
+  // FUNÇÕES AUXILIARES
+  const formatDateBR = (dateStr) => {
+    if (!dateStr) return 'N/A';
+    const [year, month, day] = dateStr.split('-');
+    if (year && month && day) return `${day}/${month}/${year}`;
+    return dateStr;
+  };
+
+  const irParaCliente = (nomeCliente) => {
+    setSelectedSiteFilter('ALL');
+    setSearchTerm(nomeCliente);
+    setActiveTab('clientes');
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -297,7 +297,6 @@ function App() {
   const expiringClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'A_VENCER');
   const activeClients = clients.filter(c => getClientExpirationInfo(c.expiry).status === 'ATIVO');
 
-  // FUNÇÃO DE ALTERNÂNCIA DE ORDENAÇÃO
   const handleSort = (field) => {
     if (sortField === field) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -307,7 +306,6 @@ function App() {
     }
   };
 
-  // FILTRAGEM E ORDENAÇÃO DINÂMICA
   const filteredClients = clients
     .filter(c => {
       const matchesSite = selectedSiteFilter === 'ALL' || c.site === selectedSiteFilter;
@@ -533,12 +531,12 @@ function App() {
                           <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
                         <button 
-  onClick={() => irParaCliente(c.name)} 
-  title="Ver na lista de clientes" 
-  className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
->
-  <i data-lucide="eye" className="w-4 h-4"></i>
-</button>
+                          onClick={() => irParaCliente(c.name)} 
+                          title="Ver na lista de clientes" 
+                          className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
+                        >
+                          <i data-lucide="eye" className="w-4 h-4"></i>
+                        </button>
                       </div>
                     ))
                   )}
@@ -548,7 +546,7 @@ function App() {
               {/* CARD VENCENDO NOS PRÓXIMOS 3 DIAS */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-amber-400">
-                  <i data-lucide="search" className="w-4 h-4"></i>
+                  <i data-lucide="alert-triangle" className="w-5 h-5"></i>
                   <h3 className="font-semibold text-base sm:text-lg text-white">Vencendo nos Próximos 3 Dias</h3>
                 </div>
                 <div className="space-y-3 max-h-80 overflow-y-auto pr-1">
@@ -566,7 +564,7 @@ function App() {
                           title="Ver na lista de clientes" 
                           className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
                         >
-                          ➡️
+                          <i data-lucide="eye" className="w-4 h-4"></i>
                         </button>
                       </div>
                     ))
@@ -635,7 +633,6 @@ function App() {
               <table className="w-full text-left text-xs sm:text-sm text-slate-300 min-w-[600px]">
                 <thead className="bg-[#111827] text-slate-400 font-semibold border-b border-slate-800/60 select-none">
                   <tr>
-                    {/* COLUNA NOME CLICÁVEL */}
                     <th 
                       onClick={() => handleSort('name')} 
                       className="py-3 px-4 cursor-pointer hover:text-white transition-colors"
@@ -652,7 +649,6 @@ function App() {
                     <th className="py-3 px-4">Login / MAC</th>
                     <th className="py-3 px-4">Senha / Key</th>
 
-                    {/* COLUNA VALIDADE CLICÁVEL */}
                     <th 
                       onClick={() => handleSort('expiry')} 
                       className="py-3 px-4 cursor-pointer hover:text-white transition-colors"
