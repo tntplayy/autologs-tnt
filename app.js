@@ -4,6 +4,11 @@ const supabase = window.supabase.createClient(supabaseUrl, supabaseAnonKey);
 const { useState, useEffect } = React;
 
 function App() {
+  const irParaCliente = (nomeCliente) => {
+    setSelectedSiteFilter('ALL');
+    setSearchTerm(nomeCliente);
+    setActiveTab('clientes');
+  };
   const formatDateBR = (dateStr) => {
   if (!dateStr) return 'N/A';
   // Se a data já estiver em YYYY-MM-DD
@@ -511,6 +516,7 @@ function App() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* CARD CLIENTES VENCIDOS */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-rose-500">
                   <i data-lucide="alert-octagon" className="w-5 h-5"></i>
@@ -526,8 +532,12 @@ function App() {
                           <p className="font-medium text-sm text-white truncate">{c.name}</p>
                           <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
-                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
-                          ⚡
+                        <button 
+                          onClick={() => irParaCliente(c.name)} 
+                          title="Ver na lista de clientes" 
+                          className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
+                        >
+                          ➡️
                         </button>
                       </div>
                     ))
@@ -535,6 +545,7 @@ function App() {
                 </div>
               </div>
 
+              {/* CARD VENCENDO NOS PRÓXIMOS 3 DIAS */}
               <div className="bg-[#0d1322] border border-slate-800/60 rounded-2xl p-5 space-y-4">
                 <div className="flex items-center space-x-2 text-amber-400">
                   <i data-lucide="alert-triangle" className="w-5 h-5"></i>
@@ -550,8 +561,12 @@ function App() {
                           <p className="font-medium text-sm text-white truncate">{c.name}</p>
                           <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
-                        <button onClick={() => dispararAutoLogin(c)} title="Automação" className="p-2 bg-blue-600 hover:bg-blue-500 rounded-lg text-white transition-all text-xs shrink-0">
-                          ⚡
+                        <button 
+                          onClick={() => irParaCliente(c.name)} 
+                          title="Ver na lista de clientes" 
+                          className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
+                        >
+                          ➡️
                         </button>
                       </div>
                     ))
