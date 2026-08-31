@@ -533,12 +533,12 @@ function App() {
                           <p className="text-xs text-slate-400 truncate">{c.site} • {formatDateBR(c.expiry)}</p>
                         </div>
                         <button 
-                          onClick={() => irParaCliente(c.name)} 
-                          title="Ver na lista de clientes" 
-                          className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
-                        >
-                          ➡️
-                        </button>
+  onClick={() => irParaCliente(c.name)} 
+  title="Ver na lista de clientes" 
+  className="p-2 bg-slate-800 hover:bg-blue-600 rounded-lg text-slate-300 hover:text-white transition-all text-xs shrink-0 flex items-center justify-center"
+>
+  <i data-lucide="eye" className="w-4 h-4"></i>
+</button>
                       </div>
                     ))
                   )}
