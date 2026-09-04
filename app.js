@@ -17,11 +17,10 @@ function App() {
       const saved = localStorage.getItem('autolog_sites_list');
       return saved ? JSON.parse(saved) : [
         { id: 1, name: 'VU Player', url: 'https://vuproplayer.com/login' },
-        { id: 2, name: 'IBO Player Pro', url: 'https://iboplayerpro.com/login' },
+        { id: 2, name: 'IBO Player Pro', url: 'https://iboplayer.pro/manage-playlists/login/' },
         { id: 3, name: 'IBO Player', url: 'https://iboplayer.com/device/login' },
         { id: 4, name: 'BOB Player', url: 'https://bobplayer.com/login' },
-        { id: 5, name: 'Quick Player', url: 'https://quickplayer.org/login' },
-        { id: 6, name: 'Clouddy', url: 'https://clouddy.online/login' }
+        { id: 5, name: 'Quick Player', url: 'https://quickplayer.app/#/login' },
       ];
     } catch (e) {
       return [];
@@ -58,6 +57,16 @@ function App() {
     setSelectedSiteFilter('ALL');
     setSearchTerm(nomeCliente);
     setActiveTab('clientes');
+  };
+
+  // FUNÇÃO PARA COPIAR MAC E SENHA
+  const copiarCredenciais = (login, senha) => {
+    const textoCopia = `Login/MAC: ${login}\nSenha/Key: ${senha}`;
+    navigator.clipboard.writeText(textoCopia).then(() => {
+      alert('Credenciais copiadas para a área de transferência!');
+    }).catch(err => {
+      alert('Erro ao copiar credenciais.');
+    });
   };
 
   useEffect(() => {
@@ -675,6 +684,11 @@ function App() {
                   ) : (
                     filteredClients.map(c => {
                       const expInfo = getClientExpirationInfo(c.expiry);
+                      
+                      // BUSCA A URL DO SITE CORRESPONDENTE (PADRÃO OU NOVO)
+                      const siteObj = sites.find(s => s.name === c.site);
+                      const targetUrl = siteObj ? siteObj.url : (c.url || '#');
+
                       return (
                         <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
                           <td className="py-3 px-4 font-medium text-white">{c.name}</td>
@@ -694,6 +708,26 @@ function App() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
+                            {/* BOTÃO COPIAR CREDENCIAIS */}
+                            <button 
+                              onClick={() => copiarCredenciais(c.login, c.senha)} 
+                              title="Copiar Login/MAC e Senha/Key" 
+                              className="text-slate-400 hover:text-emerald-400 p-1 transition-colors"
+                            >
+                              📋
+                            </button>
+
+                            {/* BOTÃO IR PARA O SITE DO CLIENTE */}
+                            <a 
+                              href={targetUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              title="Acessar site do cliente"
+                              className="inline-block text-slate-400 hover:text-blue-400 p-1 transition-colors"
+                            >
+                              🔗
+                            </a>
+
                             <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 p-1">⚡</button>
                             <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 p-1">✏️</button>
                             <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 p-1">🗑️</button>
