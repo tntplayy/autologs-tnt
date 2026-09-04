@@ -59,13 +59,14 @@ function App() {
     setActiveTab('clientes');
   };
 
-  // FUNÇÃO PARA COPIAR MAC E SENHA
-  const copiarCredenciais = (login, senha) => {
-    const textoCopia = `Login/MAC: ${login}\nSenha/Key: ${senha}`;
-    navigator.clipboard.writeText(textoCopia).then(() => {
-      alert('Credenciais copiadas para a área de transferência!');
+  // FUNÇÃO PARA COPIAR TEXTO ESPECÍFICO AO CLICAR
+  const copiarTexto = (texto, tipo) => {
+    if (!texto) return;
+    navigator.clipboard.writeText(texto).then(() => {
+      // Pequeno alerta amigável
+      alert(`${tipo} "${texto}" copiado para a área de transferência!`);
     }).catch(err => {
-      alert('Erro ao copiar credenciais.');
+      console.error('Erro ao copiar:', err);
     });
   };
 
@@ -655,8 +656,8 @@ function App() {
                     </th>
 
                     <th className="py-3 px-4">Site</th>
-                    <th className="py-3 px-4">Login / MAC</th>
-                    <th className="py-3 px-4">Senha / Key</th>
+                    <th className="py-3 px-4">Login / MAC <span className="text-[10px] text-slate-500 font-normal">(Clique p/ copiar)</span></th>
+                    <th className="py-3 px-4">Senha / Key <span className="text-[10px] text-slate-500 font-normal">(Clique p/ copiar)</span></th>
 
                     <th 
                       onClick={() => handleSort('expiry')} 
@@ -693,8 +694,25 @@ function App() {
                         <tr key={c.id} className="hover:bg-slate-800/20 transition-colors">
                           <td className="py-3 px-4 font-medium text-white">{c.name}</td>
                           <td className="py-3 px-4 text-slate-400">{c.site}</td>
-                          <td className="py-3 px-4 font-mono text-[11px]">{c.login}</td>
-                          <td className="py-3 px-4 font-mono text-[11px]">{c.senha}</td>
+                          
+                          {/* CLIQUE PARA COPIAR O LOGIN/MAC */}
+                          <td 
+                            onClick={() => copiarTexto(c.login, 'Login/MAC')}
+                            title="Clique para copiar"
+                            className="py-3 px-4 font-mono text-[11px] text-slate-300 hover:text-blue-400 cursor-pointer transition-colors group"
+                          >
+                            <span className="border-b border-dotted border-slate-600 group-hover:border-blue-400">{c.login}</span>
+                          </td>
+
+                          {/* CLIQUE PARA COPIAR A SENHA/KEY */}
+                          <td 
+                            onClick={() => copiarTexto(c.senha, 'Senha/Key')}
+                            title="Clique para copiar"
+                            className="py-3 px-4 font-mono text-[11px] text-slate-300 hover:text-blue-400 cursor-pointer transition-colors group"
+                          >
+                            <span className="border-b border-dotted border-slate-600 group-hover:border-blue-400">{c.senha}</span>
+                          </td>
+
                           <td className="py-3 px-4 text-slate-400 whitespace-nowrap">{formatDateBR(c.expiry)}</td>
                           <td className="py-3 px-4 text-center whitespace-nowrap">
                             {expInfo.status === 'VENCIDO' && (
@@ -708,15 +726,6 @@ function App() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
-                            {/* BOTÃO COPIAR CREDENCIAIS */}
-                            <button 
-                              onClick={() => copiarCredenciais(c.login, c.senha)} 
-                              title="Copiar Login/MAC e Senha/Key" 
-                              className="text-slate-400 hover:text-emerald-400 p-1 transition-colors"
-                            >
-                              📋
-                            </button>
-
                             {/* BOTÃO IR PARA O SITE DO CLIENTE */}
                             <a 
                               href={targetUrl} 
