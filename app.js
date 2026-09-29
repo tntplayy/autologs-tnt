@@ -50,9 +50,14 @@ function App() {
   // ESTADO PARA O CAMPO DE MAC COM MÁSCARA NO MODAL
   const [macInputValue, setMacInputValue] = useState('');
 
-  // FUNÇÃO DE MÁSCARA PARA O MAC (PERMITE TUDO E INSERE : A CADA 2 CARACTERES)
+  // FUNÇÃO DE MÁSCARA PARA O MAC (DESATIVA SE HOUVER "@" PARA PERMITIR E-MAIL)
   const formatarMac = (valor) => {
-    // Remove apenas os dois pontos antigos para reformatar a string crua
+    // Se o usuário digitar "@", assume que é login por e-mail e não aplica os dois pontos
+    if (valor.includes('@')) {
+      return valor;
+    }
+
+    // Remove os dois pontos antigos para reformatar a string crua
     const semDoisPontos = valor.replace(/:/g, '');
     let formatado = '';
     
