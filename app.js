@@ -17,10 +17,14 @@ function App() {
       const saved = localStorage.getItem('autolog_sites_list');
       return saved ? JSON.parse(saved) : [
         { id: 1, name: 'VU Player', url: 'https://vuproplayer.com/login' },
-        { id: 2, name: 'IBO Player Pro', url: 'https://iboplayer.pro/manage-playlists/login/' },
+        { id: 2, name: 'IBO Player Pro', url: 'https://iboplayerpro.com/login' },
         { id: 3, name: 'IBO Player', url: 'https://iboplayer.com/device/login' },
         { id: 4, name: 'BOB Player', url: 'https://bobplayer.com/login' },
-        { id: 5, name: 'Quick Player', url: 'https://quickplayer.app/#/login' },
+        { id: 5, name: 'Quick Player', url: 'https://quickplayer.org/login' },
+        { id: 6, name: 'Fun Play', url: 'https://funplays.app/#/login' }
+        { id: 7, name: 'CLOUDDY', url: '*' },
+        { id: 8, name: 'TNT PLAYER PRO', url: '*' },
+        { id: 9, name: 'Fun Play', url: 'https://funplays.app/#/login' }
       ];
     } catch (e) {
       return [];
