@@ -50,17 +50,18 @@ function App() {
   // ESTADO PARA O CAMPO DE MAC COM MÁSCARA NO MODAL
   const [macInputValue, setMacInputValue] = useState('');
 
-  // FUNÇÃO DE MÁSCARA PARA O MAC (PERMITE TODOS OS CARACTERES E COLOCA : A CADA 2)
+  // FUNÇÃO DE MÁSCARA PARA O MAC (PERMITE TUDO E INSERE : A CADA 2 CARACTERES)
   const formatarMac = (valor) => {
-    // Remove os dois pontos existentes para recalcular a formatação limpa
-    const limpo = valor.replace(/:/g, '');
+    // Remove apenas os dois pontos antigos para reformatar a string crua
+    const semDoisPontos = valor.replace(/:/g, '');
     let formatado = '';
     
-    for (let i = 0; i < limpo.length && i < 17; i++) {
+    // Reconstrói a string inserindo o ':' a cada 2 caracteres
+    for (let i = 0; i < semDoisPontos.length; i++) {
       if (i > 0 && i % 2 === 0) {
         formatado += ':';
       }
-      formatado += limpo[i];
+      formatado += semDoisPontos[i];
     }
     return formatado;
   };
