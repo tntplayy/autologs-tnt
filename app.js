@@ -21,9 +21,8 @@ function App() {
         { id: 3, name: 'IBO Player', url: 'https://iboplayer.com/device/login' },
         { id: 4, name: 'BOB Player', url: 'https://bobplayer.com/login' },
         { id: 5, name: 'Quick Player', url: 'https://quickplayer.org/login' },
-        { id: 6, name: 'Fun Play', url: 'https://funplays.app/#/login' },
-        { id: 7, name: 'CLOUDDY', url: '*' },
-        { id: 8, name: 'TNT PLAYER PRO', url: '*' },
+        { id: 6, name: 'Clouddy', url: 'https://clouddy.online/login' },
+        { id: 7, name: 'Fun Play', url: 'https://funplays.app/#/login' }
       ];
     } catch (e) {
       return [];
@@ -48,6 +47,24 @@ function App() {
   const [editingSite, setEditingSite] = useState(null);
   const [deleteSiteModal, setDeleteSiteModal] = useState(null);
 
+  // ESTADO PARA O CAMPO DE MAC COM MÁSCARA NO MODAL
+  const [macInputValue, setMacInputValue] = useState('');
+
+  // FUNÇÃO DE MÁSCARA PARA O MAC (COLOCA : A CADA 2 DÍGITOS)
+  const formatarMac = (valor) => {
+    // Remove tudo que não for letra hexadecimal ou número
+    const limpo = valor.replace(/[^0-9a-fA-F]/g, '').toUpperCase();
+    // Insere os dois pontos a cada 2 caracteres, limitando o tamanho padrão de MAC
+    let formatado = '';
+    for (let i = 0; i < limpo.length && i < 12; i++) {
+      if (i > 0 && i % 2 === 0) {
+        formatado += ':';
+      }
+      formatado += limpo[i];
+    }
+    return formatado;
+  };
+
   // FUNÇÕES AUXILIARES
   const formatDateBR = (dateStr) => {
     if (!dateStr) return 'N/A';
@@ -66,7 +83,6 @@ function App() {
   const copiarTexto = (texto, tipo) => {
     if (!texto) return;
     navigator.clipboard.writeText(texto).then(() => {
-      // Pequeno alerta amigável
       alert(`${tipo} "${texto}" copiado para a área de transferência!`);
     }).catch(err => {
       console.error('Erro ao copiar:', err);
@@ -594,7 +610,11 @@ function App() {
             <div className="flex justify-between items-center">
               <h2 className="text-xl sm:text-2xl font-bold text-white">Clientes</h2>
               <button 
-                onClick={() => { setEditingClient(null); setClientModalOpen(true); }}
+                onClick={() => { 
+                  setEditingClient(null); 
+                  setMacInputValue('');
+                  setClientModalOpen(true); 
+                }}
                 className="bg-blue-600 hover:bg-blue-500 text-white font-medium px-3.5 py-2 rounded-xl transition-all flex items-center space-x-1.5 text-xs sm:text-sm shadow-lg shadow-blue-600/20"
               >
                 <span>+ Novo Cliente</span>
@@ -689,7 +709,6 @@ function App() {
                     filteredClients.map(c => {
                       const expInfo = getClientExpirationInfo(c.expiry);
                       
-                      // BUSCA A URL DO SITE CORRESPONDENTE (PADRÃO OU NOVO)
                       const siteObj = sites.find(s => s.name === c.site);
                       const targetUrl = siteObj ? siteObj.url : (c.url || '#');
 
@@ -698,7 +717,6 @@ function App() {
                           <td className="py-3 px-4 font-medium text-white">{c.name}</td>
                           <td className="py-3 px-4 text-slate-400">{c.site}</td>
                           
-                          {/* CLIQUE PARA COPIAR O LOGIN/MAC */}
                           <td 
                             onClick={() => copiarTexto(c.login, 'Login/MAC')}
                             title="Clique para copiar"
@@ -707,7 +725,6 @@ function App() {
                             <span className="border-b border-dotted border-slate-600 group-hover:border-blue-400">{c.login}</span>
                           </td>
 
-                          {/* CLIQUE PARA COPIAR A SENHA/KEY */}
                           <td 
                             onClick={() => copiarTexto(c.senha, 'Senha/Key')}
                             title="Clique para copiar"
@@ -729,7 +746,6 @@ function App() {
                             )}
                           </td>
                           <td className="py-3 px-4 text-right whitespace-nowrap space-x-1">
-                            {/* BOTÃO IR PARA O SITE DO CLIENTE */}
                             <a 
                               href={targetUrl} 
                               target="_blank" 
@@ -741,7 +757,11 @@ function App() {
                             </a>
 
                             <button onClick={() => dispararAutoLogin(c)} title="Automação" className="text-slate-400 hover:text-amber-400 p-1">⚡</button>
-                            <button onClick={() => { setEditingClient(c); setClientModalOpen(true); }} className="text-slate-400 hover:text-blue-400 p-1">✏️</button>
+                            <button onClick={() => { 
+                              setEditingClient(c); 
+                              setMacInputValue(c.login || '');
+                              setClientModalOpen(true); 
+                            }} className="text-slate-400 hover:text-blue-400 p-1">✏️</button>
                             <button onClick={() => setDeleteClientModal(c.id)} className="text-slate-400 hover:text-rose-400 p-1">🗑️</button>
                           </td>
                         </tr>
@@ -840,11 +860,18 @@ function App() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Login / MAC</label>
-                  <input name="login" defaultValue={editingClient ? editingClient.login : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  <input 
+                    name="login" 
+                    value={macInputValue} 
+                    onChange={(e) => setMacInputValue(formatarMac(e.target.value))}
+                    placeholder="00:00:00:00:00:00"
+                    required 
+                    className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-mono uppercase" 
+                  />
                 </div>
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">Senha / Key</label>
-                  <input name="senha" defaultValue={editingClient ? editingClient.senha : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500" />
+                  <input name="senha" defaultValue={editingClient ? editingClient.senha : ''} required className="w-full bg-[#111827] border border-slate-800 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500 font-mono" />
                 </div>
               </div>
               <div>
