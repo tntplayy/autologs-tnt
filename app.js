@@ -20,7 +20,7 @@ function App() {
         { id: 2, name: 'IBO Player Pro', url: 'https://iboplayer.pro/manage-playlists/login' },
         { id: 3, name: 'IBO Player', url: 'https://iboplayer.com/device/login' },
         { id: 4, name: 'BOB Player', url: 'https://bobplayer.com/login' },
-        { id: 5, name: 'Quick Player', url: 'https://quickplayer.org/login' },
+        { id: 5, name: 'Quick Player', url: 'https://quickplayer.app/#/login' },
         { id: 7, name: 'Fun Play', url: 'https://funplays.app/#/login' },
         { id: 6, name: 'Clouddy', url: '*' },
         { id: 6, name: 'TNT PLAYER PRO', url: '*' }
